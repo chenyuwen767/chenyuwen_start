@@ -1,0 +1,11 @@
+# Build outputs
+build/
+*.exe
+*.out
+
+# Local task data created by the program
+tasks.txt
+
+# Editor settings
+.vscode/
+.idea/
