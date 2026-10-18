@@ -1,61 +1,19 @@
-#include <fstream>
 #include <iostream>
 #include <limits>
-#include <sstream>
 #include <string>
 #include <vector>
+
+#include "task_store.h"
 
 namespace {
 
 const char* kDataFile = "tasks.txt";
-
-struct Task {
-    std::string title;
-    std::string category;
-    std::string difficulty;
-    bool completed = false;
-};
 
 std::string ask(const std::string& prompt) {
     std::cout << prompt;
     std::string answer;
     std::getline(std::cin, answer);
     return answer;
-}
-
-std::vector<Task> loadTasks() {
-    std::vector<Task> tasks;
-    std::ifstream input(kDataFile);
-    std::string line;
-
-    while (std::getline(input, line)) {
-        std::istringstream fields(line);
-        Task task;
-        std::string completedText;
-
-        if (std::getline(fields, task.title, '\t') &&
-            std::getline(fields, task.category, '\t') &&
-            std::getline(fields, task.difficulty, '\t') &&
-            std::getline(fields, completedText)) {
-            task.completed = completedText == "1";
-            tasks.push_back(task);
-        }
-    }
-
-    return tasks;
-}
-
-bool saveTasks(const std::vector<Task>& tasks) {
-    std::ofstream output(kDataFile);
-    if (!output) {
-        return false;
-    }
-
-    for (const Task& task : tasks) {
-        output << task.title << '\t' << task.category << '\t'
-               << task.difficulty << '\t' << (task.completed ? "1" : "0") << '\n';
-    }
-    return true;
 }
 
 void printTasks(const std::vector<Task>& tasks, bool onlyPending) {
@@ -130,7 +88,7 @@ void printMenu() {
 }
 
 int main() {
-    std::vector<Task> tasks = loadTasks();
+    std::vector<Task> tasks = loadTasks(kDataFile);
     std::cout << "已加载 " << tasks.size() << " 道题目。\n";
 
     while (true) {
@@ -159,7 +117,7 @@ int main() {
                 completeTask(tasks);
                 break;
             case 0:
-                if (saveTasks(tasks)) {
+                if (saveTasks(tasks, kDataFile)) {
                     std::cout << "已保存到 " << kDataFile << "，再见！\n";
                     return 0;
                 }
