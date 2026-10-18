@@ -8,7 +8,7 @@ $dataFile = Join-Path $buildDirectory "tasks.txt"
 New-Item -ItemType Directory -Force -Path $buildDirectory | Out-Null
 Remove-Item -ErrorAction SilentlyContinue $dataFile
 
-g++ -std=c++17 -Wall -Wextra -pedantic (Join-Path $projectRoot "src/main.cpp") -o $program
+g++ -std=c++17 -Wall -Wextra -pedantic (Join-Path $projectRoot "src/main.cpp") (Join-Path $projectRoot "src/task_store.cpp") -o $program
 
 Push-Location $buildDirectory
 try {
