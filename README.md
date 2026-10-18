@@ -10,6 +10,16 @@
 - 自动把数据保存到当前目录的 `tasks.txt`，下次打开仍可继续使用。
 - 桌面版提供任务表格、待完成筛选和完成统计。
 
+## 环境准备与下载
+
+Windows 用户可从以下官方页面安装所需工具：
+
+- [g++（MSYS2 / MinGW-w64）](https://www.msys2.org/)：安装 MSYS2 后，在 UCRT64 终端执行 `pacman -S mingw-w64-ucrt-x86_64-gcc`。
+- [Qt 6 开源版](https://www.qt.io/download-open-source)：安装时选择 Qt 6 的 MinGW 套件，并让它与 g++ 的架构一致。
+- [CMake](https://cmake.org/download/)：下载 Windows 安装程序；安装时勾选将 CMake 加入系统 `PATH`。
+
+安装后重新打开终端，分别运行 `g++ --version`、`cmake --version`，确认命令可用。
+
 ## 学习路线
 
 1. 先阅读 `src/task_store.*`，了解命令行版和桌面版如何复用任务数据。
