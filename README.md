@@ -53,7 +53,7 @@ cmake --build build
 .\build\task_notebook_gui.exe
 ```
 
-“练习任务”标签页与命令行版共用 `tasks.txt)。在“Codeforces”标签页输入公开 handle 并查询即可；不需要账号密码。Codeforces API 每两秒最多允许一次请求，程序会在两次查询之间等待。AC 题数按最近 1000 次提交计算，完整历史可能超出统计范围；最近提交列表显示最多 20 条。
+“练习任务”标签页与命令行版共用 `tasks.txt`。在“Codeforces”标签页输入公开 handle 并查询即可；不需要账号密码。Codeforces API 每两秒最多允许一次请求，程序会在两次查询之间等待。AC 题数按最近 1000 次提交计算，完整历史可能超出统计范围；最近提交列表显示最多 20 条。
 
 Codeforces 官方 API 文档：[方法说明](https://codeforces.com/apiHelp/methods) · [API 使用说明](https://codeforces.com/apiHelp/)
 
