@@ -1,6 +1,6 @@
 # Algorithm Practice Notebook
 
-一个为算法学习者准备的 C++ 任务本，提供命令行版和 Qt 桌面版。它帮助你记录正在练习的题目，并在完成后标记状态。
+一个为算法学习者准备的 C++ 任务本，提供命令行版和 Qt 桌面版。它帮助你记录正在练习的题目，并在完成后标记状态，也可查看公开的 Codeforces 账号进度。
 
 ## 本项目能做什么？
 
@@ -9,13 +9,14 @@
 - 将指定编号的题目标记为完成。
 - 自动把数据保存到当前目录的 `tasks.txt`，下次打开仍可继续使用。
 - 桌面版提供任务表格、待完成筛选和完成统计。
+- 输入 Codeforces handle 后查看等级、当前/最高 rating、最近提交和最近 1000 次提交里的不同 AC 题数。
 
 ## 环境准备与下载
 
 Windows 用户可从以下官方页面安装所需工具：
 
 - [g++（MSYS2 / MinGW-w64）](https://www.msys2.org/)：安装 MSYS2 后，在 UCRT64 终端执行 `pacman -S mingw-w64-ucrt-x86_64-gcc`。
-- [Qt 6 开源版](https://www.qt.io/download-open-source)：安装时选择 Qt 6 的 MinGW 套件，并让它与 g++ 的架构一致。
+- [Qt 6 开源版](https://www.qt.io/download-open-source)：安装时选择 Qt 6 的 MinGW 套件，并让它与 g++ 的架构一致。请确认安装 Qt Network 模块。
 - [CMake](https://cmake.org/download/)：下载 Windows 安装程序；安装时勾选将 CMake 加入系统 `PATH`。
 
 安装后重新打开终端，分别运行 `g++ --version`、`cmake --version`，确认命令可用。
@@ -52,7 +53,9 @@ cmake --build build
 .\build\task_notebook_gui.exe
 ```
 
-桌面版与命令行版使用同一份 `tasks.txt`：可查看任务、新增题目、只显示待完成项，并将选中的题目标记为完成。
+“练习任务”标签页与命令行版共用 `tasks.txt)。在“Codeforces”标签页输入公开 handle 并查询即可；不需要账号密码。Codeforces API 每两秒最多允许一次请求，程序会在两次查询之间等待。AC 题数按最近 1000 次提交计算，完整历史可能超出统计范围；最近提交列表显示最多 20 条。
+
+Codeforces 官方 API 文档：[方法说明](https://codeforces.com/apiHelp/methods) · [API 使用说明](https://codeforces.com/apiHelp/)
 
 ## 快速体验
 
