@@ -12,7 +12,7 @@ target_include_directories(task_store PUBLIC src)
 add_executable(task_notebook src/main.cpp)
 target_link_libraries(task_notebook PRIVATE task_store)
 
-find_package(Qt6 REQUIRED COMPONENTS Widgets)
+find_package(Qt6 REQUIRED COMPONENTS Widgets Network)
 
 add_executable(task_notebook_gui WIN32 gui/main.cpp)
-target_link_libraries(task_notebook_gui PRIVATE task_store Qt6::Widgets)
+target_link_libraries(task_notebook_gui PRIVATE task_store Qt6::Widgets Qt6::Network)
