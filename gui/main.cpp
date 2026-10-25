@@ -248,7 +248,10 @@ private:
             const QString rating = user.contains("rating") ? QString::number(user.value("rating").toInt()) : "暂无";
             const QString maxRating = user.contains("maxRating") ? QString::number(user.value("maxRating").toInt()) : "暂无";
             codeforcesSummary_->setText(QString("%1（%2）  当前 rating：%3  最高 rating：%4\n正在读取最近提交……")
-                                            .arg(user.value("handle").toString(handle), rank, rating, maxRating));
+                                            .arg(user.value("handle").toString(handle))
+                                            .arg(rank)
+                                            .arg(rating)
+                                            .arg(maxRating));
             reply->deleteLater();
 
             QTimer::singleShot(2100, this, [this, handle] { loadRecentSubmissions(handle); });
