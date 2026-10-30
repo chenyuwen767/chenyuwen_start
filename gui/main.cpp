@@ -45,6 +45,10 @@
 #include "app_paths.h"
 #include "task_store.h"
 
+#ifndef APP_VERSION
+#define APP_VERSION "0.3.1"
+#endif
+
 namespace {
 
 QString taskText(const std::string& value) {
@@ -940,7 +944,7 @@ int main(int argc, char* argv[]) {
     QApplication application(argc, argv);
     QCoreApplication::setOrganizationName("chenyuwen");
     QCoreApplication::setApplicationName("AlgorithmPracticeNotebook");
-    QCoreApplication::setApplicationVersion("0.3.1");
+    QCoreApplication::setApplicationVersion(APP_VERSION);
 
     const std::filesystem::path dataFile = resolveDataFile();
     QLockFile instanceLock(QString::fromStdWString(
