@@ -8,6 +8,7 @@
 #include <QDialog>
 #include <QDialogButtonBox>
 #include <QDir>
+#include <QFileDialog>
 #include <QFormLayout>
 #include <QFrame>
 #include <QHeaderView>
@@ -25,6 +26,7 @@
 #include <QNetworkReply>
 #include <QNetworkRequest>
 #include <QPushButton>
+#include <QSaveFile>
 #include <QSet>
 #include <QSettings>
 #include <QShortcut>
@@ -43,6 +45,7 @@
 #include <vector>
 
 #include "app_paths.h"
+#include "task_export.h"
 #include "task_store.h"
 
 #ifndef APP_VERSION
@@ -249,6 +252,8 @@ public:
         QObject::connect(openDataAction, &QAction::triggered, this, [this] {
             QDesktopServices::openUrl(QUrl::fromLocalFile(displayPath(dataFile_.parent_path())));
         });
+        auto* exportAction = fileMenu->addAction("导出为 CSV…");
+        QObject::connect(exportAction, &QAction::triggered, this, [this] { exportTasks(); });
         fileMenu->addSeparator();
         auto* quitAction = fileMenu->addAction("退出");
         QObject::connect(quitAction, &QAction::triggered, this, &QWidget::close);
@@ -673,6 +678,34 @@ private:
 
         tasks_.erase(tasks_.begin() + index);
         saveAndRefresh();
+    }
+
+    void exportTasks() {
+        const QString fileName = QFileDialog::getSaveFileName(
+            this,
+            "导出任务",
+            QDir::homePath() + "/algorithm-tasks.csv",
+            "CSV 文件 (*.csv)");
+        if (fileName.isEmpty()) {
+            return;
+        }
+
+        QSaveFile file(fileName);
+        if (!file.open(QIODevice::WriteOnly)) {
+            QMessageBox::critical(this, "导出失败", file.errorString());
+            return;
+        }
+
+        const QByteArray data = QByteArray::fromStdString(tasksToCsv(tasks_));
+        if (file.write(data) != data.size() || !file.commit()) {
+            QMessageBox::critical(this, "导出失败", file.errorString());
+            return;
+        }
+
+        QMessageBox::information(
+            this,
+            "导出完成",
+            QString("已导出 %1 条任务到：\n%2").arg(tasks_.size()).arg(fileName));
     }
 
     void saveAndRefresh() {

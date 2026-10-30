@@ -21,7 +21,7 @@
   ```
 
 - [ ] 0 编译警告（项目开启了 `-Wall -Wextra -Wpedantic` / `/W4`）。
-- [ ] 两个测试套件全部通过：`task_store`、`app_paths`。
+- [ ] 三个测试套件全部通过：`task_store`、`app_paths`、`task_export`。
 - [ ] 启动冒烟：`--portable --smoke-test` 能构造窗口并自动退出（CI 使用 `Start-Process -Wait` 检查退出码）。
 
 ## 3. 数据安全验收
