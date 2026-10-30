@@ -2,13 +2,24 @@
 
 #include <QDir>
 #include <QString>
+#include <QStringList>
 #include <QUuid>
 
 class TempDir {
 public:
     TempDir() {
-        path_ = QDir::tempPath() + "/task_store_test_" + QUuid::createUuid().toString(QUuid::WithoutBraces);
-        valid_ = QDir().mkpath(path_);
+        const QString suffix = "task_store_test_" + QUuid::createUuid().toString(QUuid::WithoutBraces);
+        const QStringList bases = {QDir::currentPath(), QDir::tempPath()};
+        for (const QString& base : bases) {
+            if (base.isEmpty()) {
+                continue;
+            }
+            path_ = base + "/" + suffix;
+            if (QDir().mkpath(path_)) {
+                valid_ = true;
+                break;
+            }
+        }
     }
 
     ~TempDir() {
