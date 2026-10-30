@@ -52,6 +52,7 @@ private slots:
     void reportsMalformedLinesWithoutDroppingValidOnes();
     void loadsLegacyFileWithCrlf();
     void loadsLegacyBackslashesLiterally();
+    void stripsUtf8Bom();
     void handlesUnicodePath();
     void missingFileIsNotAnError();
     void saveFailsWhenParentDirectoryIsMissing();
@@ -170,6 +171,22 @@ void TaskStoreTest::loadsLegacyBackslashesLiterally() {
     QVERIFY(loaded.ok);
     QCOMPARE(static_cast<int>(loaded.tasks.size()), 1);
     QCOMPARE(textOf(loaded.tasks[0].title), QString("C:\\temp\\new"));
+}
+
+void TaskStoreTest::stripsUtf8Bom() {
+    TempDir directory;
+    QVERIFY(directory.isValid());
+    const auto path = taskPath(directory);
+
+    QFile file(QString::fromStdWString(path.wstring()));
+    QVERIFY(file.open(QIODevice::WriteOnly));
+    file.write(QByteArray("\xEF\xBB\xBF") + "P17633\t无\t普及-\t0\n");
+    file.close();
+
+    const LoadResult loaded = loadTasksChecked(path);
+    QVERIFY(loaded.ok);
+    QCOMPARE(static_cast<int>(loaded.tasks.size()), 1);
+    QCOMPARE(textOf(loaded.tasks[0].title), QString("P17633"));
 }
 
 void TaskStoreTest::handlesUnicodePath() {

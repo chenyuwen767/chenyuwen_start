@@ -93,6 +93,12 @@ LoadResult loadTasksChecked(const std::filesystem::path& fileName) {
         if (!line.empty() && line.back() == '\r') {
             line.pop_back();
         }
+        if (lineNumber == 1 && line.size() >= 3 &&
+            static_cast<unsigned char>(line[0]) == 0xEF &&
+            static_cast<unsigned char>(line[1]) == 0xBB &&
+            static_cast<unsigned char>(line[2]) == 0xBF) {
+            line.erase(0, 3);
+        }
         if (lineNumber == 1 && line == kFileHeader) {
             escapedFormat = true;
             continue;
