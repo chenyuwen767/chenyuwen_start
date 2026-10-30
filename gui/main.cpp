@@ -12,7 +12,6 @@
 #include <QFrame>
 #include <QHeaderView>
 #include <QHBoxLayout>
-#include <QInputDialog>
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>

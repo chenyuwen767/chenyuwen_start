@@ -56,7 +56,7 @@
 
 ```powershell
 cmake --install build --prefix dist --config Release
-windeployqt --release --no-translations dist\task_notebook_gui.exe
+windeployqt --release --no-translations --compiler-runtime dist\task_notebook_gui.exe
 Compress-Archive -Path dist\* -DestinationPath task_notebook_gui-windows.zip
 ```
 

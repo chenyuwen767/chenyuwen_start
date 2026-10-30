@@ -73,7 +73,7 @@ Codeforces 官方 API 文档：[方法说明](https://codeforces.com/apiHelp/met
 
 ```powershell
 cmake --install build --prefix dist --config Release
-windeployqt --release --no-translations dist\task_notebook_gui.exe
+windeployqt --release --no-translations --compiler-runtime dist\task_notebook_gui.exe
 ```
 
 将 `dist` 整个目录压缩即可分发；目标机器不需要安装 Qt。
