@@ -48,6 +48,7 @@
 
 #include "app_paths.h"
 #include "task_export.h"
+#include "task_history.h"
 #include "task_store.h"
 
 #if __has_include("version.h")
@@ -266,6 +267,11 @@ public:
         auto* quitAction = fileMenu->addAction("退出");
         QObject::connect(quitAction, &QAction::triggered, this, &QWidget::close);
 
+        auto* editMenu = menuBar->addMenu("编辑");
+        undoAction_ = editMenu->addAction("撤销上一步");
+        undoAction_->setEnabled(false);
+        QObject::connect(undoAction_, &QAction::triggered, this, [this] { undoLast(); });
+
         auto* helpMenu = menuBar->addMenu("帮助");
         auto* aboutAction = helpMenu->addAction("关于");
         QObject::connect(aboutAction, &QAction::triggered, this, [this] {
@@ -327,8 +333,10 @@ protected:
 private:
     const std::filesystem::path dataFile_;
     std::vector<Task> tasks_;
+    TaskHistory history_;
     QNetworkAccessManager* network_;
     QSettings settings_;
+    QAction* undoAction_ = nullptr;
     bool dataLoadFailed_ = false;
     bool codeforcesLoading_ = false;
     bool luoguLoading_ = false;
@@ -438,6 +446,9 @@ private:
         auto* deleteShortcut = new QShortcut(QKeySequence::Delete, taskTable_);
         deleteShortcut->setContext(Qt::WidgetShortcut);
         connect(deleteShortcut, &QShortcut::activated, this, [this] { deleteTask(); });
+        auto* undoShortcut = new QShortcut(QKeySequence::Undo, taskTable_);
+        undoShortcut->setContext(Qt::WidgetShortcut);
+        connect(undoShortcut, &QShortcut::activated, this, [this] { undoLast(); });
         return page;
     }
 
@@ -593,6 +604,7 @@ private:
             }
         }
 
+        rememberState();
         tasks_.push_back({toTaskText(title), toTaskText(category), toTaskText(difficulty), false});
         saveAndRefresh();
     }
@@ -607,6 +619,28 @@ private:
             }
         }
         return false;
+    }
+
+    void rememberState() {
+        history_.record(tasks_);
+        updateUndoAction();
+    }
+
+    void updateUndoAction() {
+        if (undoAction_) {
+            undoAction_->setEnabled(history_.canUndo());
+        }
+    }
+
+    void undoLast() {
+        std::vector<Task> previous;
+        if (!history_.undo(previous)) {
+            QMessageBox::information(this, "没有可撤销的操作", "已经回到本轮最早的状态。");
+            return;
+        }
+        tasks_ = previous;
+        updateUndoAction();
+        saveAndRefresh();
     }
 
     int selectedTaskIndex() const {
@@ -644,6 +678,7 @@ private:
             }
         }
 
+        rememberState();
         tasks_[static_cast<std::size_t>(index)].title = toTaskText(title);
         tasks_[static_cast<std::size_t>(index)].category = toTaskText(category);
         tasks_[static_cast<std::size_t>(index)].difficulty = toTaskText(difficulty);
@@ -664,6 +699,10 @@ private:
             QMessageBox::information(this, "请选择题目", "请先在表格中选择一道题目。");
             return;
         }
+        if (tasks_[static_cast<std::size_t>(index)].completed == completed) {
+            return;
+        }
+        rememberState();
         tasks_[static_cast<std::size_t>(index)].completed = completed;
         saveAndRefresh();
     }
@@ -686,6 +725,7 @@ private:
             return;
         }
 
+        rememberState();
         tasks_.erase(tasks_.begin() + index);
         saveAndRefresh();
     }
@@ -707,6 +747,7 @@ private:
             return;
         }
 
+        rememberState();
         QFile backup(backupFile);
         if (!backup.open(QIODevice::ReadOnly)) {
             QMessageBox::critical(this, "恢复失败", backup.errorString());
@@ -766,8 +807,10 @@ private:
         box.exec();
 
         if (box.clickedButton() == appendButton) {
+            rememberState();
             tasks_.insert(tasks_.end(), imported.begin(), imported.end());
         } else if (box.clickedButton() == replaceButton) {
+            rememberState();
             tasks_ = imported;
         } else {
             return;

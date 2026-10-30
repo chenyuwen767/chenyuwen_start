@@ -7,7 +7,7 @@
 ## 本项目能做什么？
 
 - 在桌面界面中新增、编辑、删除练习题，并标记完成或待完成。
-- 按题目名称、分类或难度搜索；支持 `Ctrl+N` 新增、`Ctrl+F` 搜索、`Delete` 删除。
+- 按题目名称、分类或难度搜索；支持 `Ctrl+N` 新增、`Ctrl+F` 搜索、`Delete` 删除、`Ctrl+Z` 撤销最近一步。
 - 支持把任务导出为 CSV，也可从 CSV 导入（追加或替换），便于在 Excel 中查看或存档。
 - “文件 → 从备份恢复…”可用 `.bak` 恢复上一版任务数据。
 - 筛选待完成题目，并查看完成数量。
@@ -106,12 +106,14 @@ windeployqt --release --no-translations --compiler-runtime dist\task_notebook_gu
 .
 ├── gui/main.cpp                   # Qt 桌面界面与在线账号查询
 ├── src/app_paths.*                # 数据目录、迁移与备份恢复
-├── src/task_export.*              # CSV 导出
+├── src/task_export.*              # CSV 导出/导入
+├── src/task_history.*             # 撤销快照栈
 ├── src/task_store.*               # 任务数据读取、转义、备份与原子保存
 ├── src/version.h.in               # CMake 生成的版本头模板
 ├── tests/test_task_store.cpp      # 存储层测试（Qt Test）
 ├── tests/test_app_paths.cpp       # 数据目录/迁移测试（Qt Test）
-├── tests/test_task_export.cpp     # CSV 导出测试（Qt Test）
+├── tests/test_task_export.cpp     # CSV 导出/导入测试（Qt Test）
+├── tests/test_task_history.cpp    # 撤销栈测试（Qt Test）
 ├── scripts/package.ps1            # 便携版打包脚本
 ├── docs/ROADMAP.md                # 项目评估与后续发展规划
 ├── docs/RELEASE.md                # 发布检查清单
