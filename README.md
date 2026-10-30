@@ -85,7 +85,7 @@ windeployqt --release --no-translations --compiler-runtime dist\task_notebook_gu
 
 ## 后续规划
 
-项目评估、分阶段路线图与技术演进方案见 [docs/ROADMAP.md](docs/ROADMAP.md)；发布前检查见 [docs/RELEASE.md](docs/RELEASE.md)。
+项目评估、分阶段路线图与技术演进方案见 [docs/ROADMAP.md](docs/ROADMAP.md)；发布前检查见 [docs/RELEASE.md](docs/RELEASE.md)；参与贡献见 [CONTRIBUTING.md](CONTRIBUTING.md)。
 
 ## 许可证
 
@@ -112,6 +112,7 @@ windeployqt --release --no-translations --compiler-runtime dist\task_notebook_gu
 ├── docs/RELEASE.md                # 发布检查清单
 ├── docs/screenshot.png            # 界面截图
 ├── CHANGELOG.md                   # 版本变化记录
+├── CONTRIBUTING.md                # 贡献指南
 ├── LICENSE                        # MIT 许可证
 ├── CMakeLists.txt                 # 构建配置
 ├── README.md
