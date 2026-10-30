@@ -13,6 +13,7 @@ private slots:
     void writesCompletedStatus();
     void roundTripsThroughCsv();
     void acceptsHeaderlessRows();
+    void acceptsCrlfFromExcel();
     void rejectsMissingColumns();
     void rejectsUnknownStatus();
 };
@@ -55,6 +56,14 @@ void TaskExportTest::acceptsHeaderlessRows() {
     std::vector<Task> parsed;
     std::string error;
     QVERIFY(tasksFromCsv("A,B,C,已完成\n", parsed, error));
+    QCOMPARE(static_cast<int>(parsed.size()), 1);
+    QCOMPARE(parsed[0].completed, true);
+}
+
+void TaskExportTest::acceptsCrlfFromExcel() {
+    std::vector<Task> parsed;
+    std::string error;
+    QVERIFY(tasksFromCsv("题目,分类,难度,状态\r\nA,B,C,已完成\r\n", parsed, error));
     QCOMPARE(static_cast<int>(parsed.size()), 1);
     QCOMPARE(parsed[0].completed, true);
 }
