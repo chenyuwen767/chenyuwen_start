@@ -80,7 +80,7 @@ windeployqt --release --no-translations dist\task_notebook_gui.exe
 
 ## 后续规划
 
-项目评估、分阶段路线图与技术演进方案见 [docs/ROADMAP.md](docs/ROADMAP.md)。
+项目评估、分阶段路线图与技术演进方案见 [docs/ROADMAP.md](docs/ROADMAP.md)；发布前检查见 [docs/RELEASE.md](docs/RELEASE.md)。
 
 ## 许可证
 
@@ -96,6 +96,7 @@ windeployqt --release --no-translations dist\task_notebook_gui.exe
 ├── tests/test_task_store.cpp      # 存储层测试（Qt Test）
 ├── tests/test_app_paths.cpp       # 数据目录/迁移测试（Qt Test）
 ├── docs/ROADMAP.md                # 项目评估与后续发展规划
+├── docs/RELEASE.md                # 发布检查清单
 ├── CHANGELOG.md                   # 版本变化记录
 ├── LICENSE                        # MIT 许可证
 ├── CMakeLists.txt                 # 构建配置
