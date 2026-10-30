@@ -35,7 +35,11 @@ jobs:
         run: |
           $env:QT_QPA_PLATFORM = "offscreen"
           $exe = Get-ChildItem build -Recurse -Filter task_notebook_gui.exe | Select-Object -First 1
-          $process = Start-Process -FilePath $exe.FullName -ArgumentList "--portable", "--smoke-test" -PassThru -Wait
+          $process = Start-Process -FilePath $exe.FullName -ArgumentList "--portable", "--smoke-test" -PassThru
+          if (-not $process.WaitForExit(30000)) {
+            $process.Kill()
+            throw "Startup smoke test timed out"
+          }
           if ($process.ExitCode -ne 0) { exit $process.ExitCode }
 
       - name: Package portable build
