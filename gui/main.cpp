@@ -1097,9 +1097,9 @@ int main(int argc, char* argv[]) {
     if (!instanceLock.tryLock(100)) {
         QMessageBox::warning(
             nullptr,
-            "程序已在运行",
-            QString("检测到另一个实例正在使用同一份数据：\n%1\n\n"
-                    "请先关闭已运行的窗口，避免同时写入造成数据覆盖。")
+            "无法启动",
+            QString("无法独占任务数据文件：\n%1\n\n"
+                    "可能已有另一个实例在运行，或数据目录不可写。")
                 .arg(displayPath(dataFile)));
         return 1;
     }
