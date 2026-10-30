@@ -23,11 +23,11 @@ std::filesystem::path app_paths::resolveDataFile(const QStringList& arguments,
                                                   const QString& currentDirectory,
                                                   const QString& applicationDataDirectory) {
     const bool portable = arguments.contains("--portable");
-    const QString target = taskFileIn(portable ? applicationDirectory : applicationDataDirectory);
-
-    if (!portable) {
-        QDir().mkpath(applicationDataDirectory);
+    QString dataDirectory = applicationDataDirectory;
+    if (!portable && !QDir().mkpath(dataDirectory)) {
+        dataDirectory = applicationDirectory;
     }
+    const QString target = taskFileIn(portable ? applicationDirectory : dataDirectory);
 
     if (!QFileInfo::exists(target)) {
         const QString backup = target + ".bak";
