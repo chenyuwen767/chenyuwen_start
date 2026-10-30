@@ -18,7 +18,7 @@
 Windows 用户可从以下官方页面安装所需工具：
 
 - [g++（MSYS2 / MinGW-w64）](https://www.msys2.org/)：安装 MSYS2 后，在 UCRT64 终端执行 `pacman -S mingw-w64-ucrt-x86_64-gcc`。
-- [Qt 6 开源版](https://www.qt.io/download-open-source)：安装时选择 Qt 6 的 MinGW 套件，并让它与 g++ 的架构一致。请确认安装 Qt Network 模块。
+- [Qt 6 开源版](https://www.qt.io/download-open-source)：安装时选择 Qt 6.5 或更新版本的 MinGW 套件，并让它与 g++ 的架构一致。请确认安装 Qt Network 模块。
 - [CMake](https://cmake.org/download/)：下载 Windows 安装程序；安装时勾选将 CMake 加入系统 `PATH`。
 
 安装后重新打开终端，分别运行 `g++ --version`、`cmake --version`，确认命令可用。
@@ -55,6 +55,19 @@ ctest --test-dir build --output-on-failure
 在“洛谷”标签页输入用户名或 UID 即可查看公开账号资料。当前可显示通过题数、提交题数、等级分和关注数据。洛谷可能要求登录后才能查看他人的提交明细，因此本项目不会显示受限制的记录，也不会请求、保存或传输账号密码。公开资料中缺失的字段会显示“未公开”。
 
 Codeforces 官方 API 文档：[方法说明](https://codeforces.com/apiHelp/methods) · [API 使用说明](https://codeforces.com/apiHelp/)
+
+## 隐私与数据
+
+- 任务数据只保存在本机；默认位置见“数据保存在哪里”，不会上传。
+- 查询时只向 Codeforces / 洛谷发送你输入的公开账号标识，不发送任务内容。
+- 不收集遥测，不保存账号密码、Cookie 或登录凭据。
+- 洛谷接口是非官方接口，字段和访问策略可能变化；缺失字段会显示“未公开”。
+
+## 已知限制
+
+- Codeforces 的通过题数只统计最近 1000 次提交，不能代表完整历史。
+- 洛谷提交明细可能要求登录，本项目不读取受限制的数据。
+- Codeforces API 每两秒最多一次请求；连续查询多个账号时可能需要等待。
 
 ## 打包便携版
 
