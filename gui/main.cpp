@@ -49,7 +49,9 @@
 #include "task_export.h"
 #include "task_store.h"
 
-#ifndef APP_VERSION
+#if __has_include("version.h")
+#include "version.h"
+#else
 #define APP_VERSION "0.3.1"
 #endif
 

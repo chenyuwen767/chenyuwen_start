@@ -4,8 +4,7 @@
 
 ## 1. 版本与文档
 
-- [ ] 确认 `CMakeLists.txt` 的 `project(... VERSION ...)` 已更新。
-- [ ] 确认 `gui/main.cpp` 的 `APP_VERSION` 兜底值与上一步一致（CMake 构建时会自动注入版本）。
+- [ ] 确认 `CMakeLists.txt` 的 `project(... VERSION ...)` 已更新（`version.h` 由 CMake 生成，源码内只剩兜底值）。
 - [ ] 更新 `CHANGELOG.md`，把 `[Unreleased]` 改为目标版本号并补日期。
 - [ ] 更新 `README.md` 中受影响的构建、数据位置或功能说明。
 - [ ] 确认 `LICENSE` 与版权年份正确。

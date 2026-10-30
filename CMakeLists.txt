@@ -7,6 +7,9 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_AUTOMOC ON)
 
+file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/generated")
+configure_file(src/version.h.in "${CMAKE_BINARY_DIR}/generated/version.h" @ONLY)
+
 find_package(Qt6 6.5 REQUIRED COMPONENTS Widgets Network)
 
 add_executable(task_notebook_gui WIN32
@@ -15,9 +18,8 @@ add_executable(task_notebook_gui WIN32
     src/task_export.cpp
     src/task_store.cpp
 )
-target_include_directories(task_notebook_gui PRIVATE src)
+target_include_directories(task_notebook_gui PRIVATE src "${CMAKE_BINARY_DIR}/generated")
 target_link_libraries(task_notebook_gui PRIVATE Qt6::Widgets Qt6::Network)
-target_compile_definitions(task_notebook_gui PRIVATE APP_VERSION="${PROJECT_VERSION}")
 
 if (MSVC)
     target_compile_options(task_notebook_gui PRIVATE /W4 /permissive-)
