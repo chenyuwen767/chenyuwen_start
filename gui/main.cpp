@@ -26,6 +26,7 @@
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
 #include <QNetworkRequest>
+#include <QPixmap>
 #include <QPushButton>
 #include <QSaveFile>
 #include <QSet>
@@ -1107,9 +1108,13 @@ int main(int argc, char* argv[]) {
     MainWindow window;
     window.show();
 
-    // Used by CI and local smoke checks: construct the real window, then quit.
+    // Used by CI and local smoke checks: construct the real window, optionally
+    // save a screenshot, then quit.
     if (QCoreApplication::arguments().contains("--smoke-test")) {
-        QTimer::singleShot(1500, &application, &QCoreApplication::quit);
+        QTimer::singleShot(700, &application, [&application, &window] {
+            window.grab().save(QDir::tempPath() + "/algorithm_notebook_smoke.png");
+            QTimer::singleShot(300, &application, &QCoreApplication::quit);
+        });
     }
 
     return application.exec();
