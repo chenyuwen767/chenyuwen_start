@@ -421,9 +421,11 @@ private:
         connect(deleteButton, &QPushButton::clicked, this, [this] { deleteTask(); });
         connect(taskTable_, &QTableWidget::doubleClicked, this, [this] { editTask(); });
 
-        auto* newShortcut = new QShortcut(QKeySequence::New, this);
+        auto* newShortcut = new QShortcut(QKeySequence::New, page);
+        newShortcut->setContext(Qt::WidgetWithChildrenShortcut);
         connect(newShortcut, &QShortcut::activated, this, [this] { addTask(); });
-        auto* findShortcut = new QShortcut(QKeySequence::Find, this);
+        auto* findShortcut = new QShortcut(QKeySequence::Find, page);
+        findShortcut->setContext(Qt::WidgetWithChildrenShortcut);
         connect(findShortcut, &QShortcut::activated, this, [this] {
             taskSearch_->setFocus();
             taskSearch_->selectAll();
