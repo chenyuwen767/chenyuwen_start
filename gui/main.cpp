@@ -1,5 +1,6 @@
 #include <QApplication>
 #include <QCheckBox>
+#include <QCloseEvent>
 #include <QCoreApplication>
 #include <QDateTime>
 #include <QDir>
@@ -20,6 +21,7 @@
 #include <QNetworkRequest>
 #include <QPushButton>
 #include <QSet>
+#include <QSettings>
 #include <QStandardPaths>
 #include <QStringList>
 #include <QTableWidget>
@@ -98,6 +100,10 @@ public:
 
         setWindowTitle("算法练习任务本");
         resize(960, 680);
+        const QByteArray geometry = settings_.value("window/geometry").toByteArray();
+        if (!geometry.isEmpty()) {
+            restoreGeometry(geometry);
+        }
         setStyleSheet(R"(
             QWidget {
                 background: #f5f7fb;
@@ -221,6 +227,10 @@ public:
         tabs->addTab(createCodeforcesPage(), "Codeforces");
         tabs->addTab(createLuoguPage(), "洛谷");
         layout->addWidget(tabs);
+
+        codeforcesHandleInput_->setText(settings_.value("codeforces/handle").toString());
+        luoguHandleInput_->setText(settings_.value("luogu/handle").toString());
+        pendingOnly_->setChecked(settings_.value("tasks/pendingOnly", false).toBool());
         refreshTasks();
 
         if (!loaded.ok) {
@@ -242,10 +252,17 @@ public:
         }
     }
 
+protected:
+    void closeEvent(QCloseEvent* event) override {
+        settings_.setValue("window/geometry", saveGeometry());
+        QWidget::closeEvent(event);
+    }
+
 private:
     const std::filesystem::path dataFile_;
     std::vector<Task> tasks_;
     QNetworkAccessManager* network_;
+    QSettings settings_;
     bool dataLoadFailed_ = false;
     bool codeforcesLoading_ = false;
     bool luoguLoading_ = false;
@@ -318,7 +335,10 @@ private:
         buttons->addStretch();
         layout->addLayout(buttons);
 
-        connect(pendingOnly_, &QCheckBox::toggled, this, [this] { refreshTasks(); });
+        connect(pendingOnly_, &QCheckBox::toggled, this, [this](bool checked) {
+            settings_.setValue("tasks/pendingOnly", checked);
+            refreshTasks();
+        });
         connect(addButton, &QPushButton::clicked, this, [this] { addTask(); });
         connect(editButton, &QPushButton::clicked, this, [this] { editTask(); });
         connect(completeButton, &QPushButton::clicked, this, [this] { completeTask(); });
@@ -651,6 +671,7 @@ private:
 
         codeforcesLoading_ = true;
         codeforcesButton_->setEnabled(false);
+        settings_.setValue("codeforces/handle", handle);
         codeforcesSummary_->setText("正在查询账号资料……");
         codeforcesSubmissionsTable_->setRowCount(0);
 
@@ -754,6 +775,7 @@ private:
 
         luoguLoading_ = true;
         luoguButton_->setEnabled(false);
+        settings_.setValue("luogu/handle", account);
         luoguSummary_->setText("正在查询公开资料……");
         luoguDetails_->setText("正在读取账号统计……");
 
