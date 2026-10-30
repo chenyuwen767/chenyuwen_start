@@ -89,6 +89,11 @@ windeployqt --release --no-translations --compiler-runtime dist\task_notebook_gu
 
 本项目使用 MIT 许可证，详见 [LICENSE](LICENSE)。
 
+## 第三方组件
+
+- Qt 6（Widgets / Network / Test）按 LGPLv3 使用；分发二进制时请遵守 Qt 的许可要求，并随包附上 Qt 许可文本。
+- Codeforces API 与洛谷公开接口仅用于读取公开数据，接口归属各自平台。
+
 ## 文件结构
 
 ```text
