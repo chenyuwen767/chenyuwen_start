@@ -34,6 +34,7 @@ private slots:
     void stripsUtf8Bom();
     void handlesUnicodePath();
     void missingFileIsNotAnError();
+    void reportsDirectoryAsError();
     void saveFailsWhenParentDirectoryIsMissing();
 };
 
@@ -192,6 +193,16 @@ void TaskStoreTest::missingFileIsNotAnError() {
     QVERIFY(loaded.ok);
     QVERIFY(loaded.tasks.empty());
     QVERIFY(loaded.warnings.empty());
+}
+
+void TaskStoreTest::reportsDirectoryAsError() {
+    TempDir directory;
+    QVERIFY(directory.isValid());
+
+    const LoadResult loaded =
+        loadTasksChecked(std::filesystem::path(directory.path().toStdWString()));
+    QVERIFY(!loaded.ok);
+    QVERIFY(!loaded.error.empty());
 }
 
 void TaskStoreTest::saveFailsWhenParentDirectoryIsMissing() {

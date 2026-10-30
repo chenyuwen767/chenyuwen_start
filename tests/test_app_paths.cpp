@@ -34,6 +34,7 @@ class AppPathsTest : public QObject {
 
 private slots:
     void portableUsesApplicationDirectory();
+    void portableRestoresBackup();
     void migratesFromApplicationDirectory();
     void migratesFromCurrentDirectory();
     void restoresBackup();
@@ -59,6 +60,22 @@ void AppPathsTest::portableUsesApplicationDirectory() {
 
     QCOMPARE(pathOf(resolved), applicationDirectory.filePath("tasks.txt"));
     QVERIFY(!QFile::exists(dataDirectory.filePath("tasks.txt")));
+}
+
+void AppPathsTest::portableRestoresBackup() {
+    TempDir applicationDirectory;
+    TempDir currentDirectory;
+    TempDir dataDirectory;
+    QVERIFY(writeFile(applicationDirectory.filePath("tasks.txt.bak"), "portable-backup"));
+
+    const auto resolved = app_paths::resolveDataFile(
+        {"--portable"},
+        applicationDirectory.path(),
+        currentDirectory.path(),
+        dataDirectory.path());
+
+    QCOMPARE(pathOf(resolved), applicationDirectory.filePath("tasks.txt"));
+    QCOMPARE(readFile(applicationDirectory.filePath("tasks.txt")), QByteArray("portable-backup"));
 }
 
 void AppPathsTest::migratesFromApplicationDirectory() {
