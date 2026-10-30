@@ -329,7 +329,7 @@ connect(codeforcesHandleInput_, &QLineEdit::returnPressed, this, [this] { loadCo
 7. 最小测试：`tests/` 下覆盖存储往返、迁移、损坏文件、原子替换；接入 CTest。
 8. CI：GitHub Actions `windows-latest` + Qt + CMake + `ctest`。
 9. 打包：`windeployqt` 生成 portable zip；README 增加部署说明。
-10. 仓库治理：补 `LICENSE`（MIT 或 Apache-2.0，需确认）、推送 7 个提交、打 `v0.3.1` tag。
+10. 仓库治理：补 `LICENSE`（MIT 或 Apache-2.0，需确认）、推送本地提交、打 `v0.3.1` tag。
 
 验收：
 
@@ -635,7 +635,7 @@ install(TARGETS task_notebook_gui RUNTIME DESTINATION .)
 | P0-3 | 删除/编辑/撤销完成/重复检测 | 功能 | P0 | M | 无 |
 | P0-4 | JSON v2 + 迁移报告 | 数据 | P0 | M | P0-1/2 |
 | P0-5 | 存储层单元测试 + CTest | 质量 | P0 | M | P0-4 |
-| P0-6 | 推送 7 个提交 + LICENSE + tag v0.3.1 | 治理 | P0 | S | 无 |
+| P0-6 | 推送本地提交 + LICENSE + tag v0.3.1 | 治理 | P0 | S | 无 |
 | P1-1 | 网络超时/重试/统一限流/取消 | 稳定性 | P1 | M | 无 |
 | P1-2 | 查询防重入（回车/按钮） | 稳定性 | P1 | S | 无 |
 | P1-3 | 洛谷 null 显示修复 | 正确性 | P1 | S | 无 |
@@ -744,7 +744,7 @@ install(TARGETS task_notebook_gui RUNTIME DESTINATION .)
 
 **Day 1｜收拾仓库**
 
-- [ ] 推送现有 7 个提交到 `origin/main`。
+- [ ] 推送现有本地提交到 `origin/main`。
 - [ ] 选择并添加 `LICENSE`（建议 MIT；如希望专利授权用 Apache-2.0）。
 - [ ] 添加 `.clang-format`、`CMakePresets.json`。
 - [ ] 建 `v0.3.1` 里程碑，把 P0 项写成 issue/清单。
