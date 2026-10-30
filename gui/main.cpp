@@ -121,7 +121,7 @@ public:
     MainWindow() : dataFile_(resolveDataFile()), network_(new QNetworkAccessManager(this)) {
         const LoadResult loaded = loadTasksChecked(dataFile_);
         tasks_ = loaded.tasks;
-        dataLoadFailed_ = !loaded.ok;
+        dataLoadFailed_ = !loaded.ok || !loaded.warnings.empty();
 
         setWindowTitle("算法练习任务本");
         resize(960, 680);
@@ -294,7 +294,10 @@ public:
                 warnings << QString::fromStdString(warning);
             }
             QTimer::singleShot(0, this, [this, text = warnings.join('\n')] {
-                QMessageBox::warning(this, "部分数据未读取", text);
+                QMessageBox::warning(
+                    this,
+                    "部分数据未读取",
+                    text + "\n\n继续修改并保存会以当前列表为准，被跳过的行无法恢复。");
             });
         }
     }
