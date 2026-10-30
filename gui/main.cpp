@@ -18,6 +18,7 @@
 #include <QJsonObject>
 #include <QLabel>
 #include <QLineEdit>
+#include <QLockFile>
 #include <QMenu>
 #include <QMenuBar>
 #include <QMessageBox>
@@ -936,6 +937,20 @@ int main(int argc, char* argv[]) {
     QCoreApplication::setOrganizationName("chenyuwen");
     QCoreApplication::setApplicationName("AlgorithmPracticeNotebook");
     QCoreApplication::setApplicationVersion("0.3.1");
+
+    const std::filesystem::path dataFile = resolveDataFile();
+    QLockFile instanceLock(QString::fromStdWString(
+        (dataFile.parent_path() / "algorithm_notebook.lock").wstring()));
+    if (!instanceLock.tryLock(100)) {
+        QMessageBox::warning(
+            nullptr,
+            "程序已在运行",
+            QString("检测到另一个实例正在使用同一份数据：\n%1\n\n"
+                    "请先关闭已运行的窗口，避免同时写入造成数据覆盖。")
+                .arg(displayPath(dataFile)));
+        return 1;
+    }
+
     MainWindow window;
     window.show();
     return application.exec();
