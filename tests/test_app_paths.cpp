@@ -38,6 +38,7 @@ private slots:
     void migratesFromCurrentDirectory();
     void restoresBackup();
     void keepsExistingFile();
+    void fallsBackWhenDataDirectoryIsUnavailable();
 };
 
 void AppPathsTest::portableUsesApplicationDirectory() {
@@ -124,6 +125,20 @@ void AppPathsTest::keepsExistingFile() {
 
     QCOMPARE(pathOf(resolved), dataDirectory.filePath("tasks.txt"));
     QCOMPARE(readFile(dataDirectory.filePath("tasks.txt")), QByteArray("current"));
+}
+
+void AppPathsTest::fallsBackWhenDataDirectoryIsUnavailable() {
+    TempDir applicationDirectory;
+    TempDir currentDirectory;
+    QVERIFY(writeFile(applicationDirectory.filePath("blocked"), "not-a-directory"));
+
+    const auto resolved = app_paths::resolveDataFile(
+        {},
+        applicationDirectory.path(),
+        currentDirectory.path(),
+        applicationDirectory.filePath("blocked"));
+
+    QCOMPARE(pathOf(resolved), applicationDirectory.filePath("tasks.txt"));
 }
 
 QTEST_APPLESS_MAIN(AppPathsTest)
