@@ -10,6 +10,7 @@
 - 任务编辑、删除、标记为待完成。
 - 存储层单元测试（Qt Test），覆盖字段转义、备份、损坏行、旧格式、Unicode 路径。
 - Windows GitHub Actions：构建、测试、`windeployqt` 打包并上传 artifact。
+- `--smoke-test` 启动冒烟测试：构造真实窗口后自动退出，已接入 CI。
 - `--portable` 模式：数据文件放在 exe 同目录。
 - 记住窗口位置、上次查询的账号与“只看待完成”筛选状态。
 - 任务搜索（题目/分类/难度）与 `Ctrl+N`、`Ctrl+F`、`Delete` 快捷键。

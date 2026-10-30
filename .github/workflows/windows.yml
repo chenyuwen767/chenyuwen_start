@@ -30,6 +30,14 @@ jobs:
       - name: Test
         run: ctest --test-dir build -C Release --output-on-failure
 
+      - name: Startup smoke test
+        shell: pwsh
+        run: |
+          $env:QT_QPA_PLATFORM = "offscreen"
+          $exe = Get-ChildItem build -Recurse -Filter task_notebook_gui.exe | Select-Object -First 1
+          & $exe.FullName --portable --smoke-test
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
       - name: Package portable build
         shell: pwsh
         run: |

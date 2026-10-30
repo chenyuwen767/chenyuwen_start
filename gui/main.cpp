@@ -958,5 +958,11 @@ int main(int argc, char* argv[]) {
 
     MainWindow window;
     window.show();
+
+    // Used by CI and local smoke checks: construct the real window, then quit.
+    if (QCoreApplication::arguments().contains("--smoke-test")) {
+        QTimer::singleShot(1500, &application, &QCoreApplication::quit);
+    }
+
     return application.exec();
 }
