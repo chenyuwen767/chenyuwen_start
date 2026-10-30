@@ -11,6 +11,8 @@
 - Windows GitHub Actions：构建、测试、`windeployqt` 打包并上传 artifact。
 - `--portable` 模式：数据文件放在 exe 同目录。
 - 记住窗口位置、上次查询的账号与“只看待完成”筛选状态。
+- 任务搜索（题目/分类/难度）与 `Ctrl+N`、`Ctrl+F`、`Delete` 快捷键。
+- 数据目录解析、旧文件迁移和备份恢复的独立测试（`tests/test_app_paths.cpp`）。
 
 ### Changed
 

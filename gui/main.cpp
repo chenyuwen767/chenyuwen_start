@@ -4,8 +4,6 @@
 #include <QCoreApplication>
 #include <QDateTime>
 #include <QDir>
-#include <QFile>
-#include <QFileInfo>
 #include <QFrame>
 #include <QHeaderView>
 #include <QHBoxLayout>
@@ -22,6 +20,7 @@
 #include <QPushButton>
 #include <QSet>
 #include <QSettings>
+#include <QShortcut>
 #include <QStandardPaths>
 #include <QStringList>
 #include <QTableWidget>
@@ -36,6 +35,7 @@
 #include <string>
 #include <vector>
 
+#include "app_paths.h"
 #include "task_store.h"
 
 namespace {
@@ -57,36 +57,15 @@ QString optionalNumber(const QJsonValue& value) {
 }
 
 std::filesystem::path resolveDataFile() {
-    const QStringList arguments = QCoreApplication::arguments();
-    if (arguments.contains("--portable")) {
-        return std::filesystem::path(
-            (QCoreApplication::applicationDirPath() + "/tasks.txt").toStdWString());
-    }
-
     QString directory = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
-    if (directory.isEmpty() || !QDir().mkpath(directory)) {
+    if (directory.isEmpty()) {
         directory = QCoreApplication::applicationDirPath();
     }
-
-    const QString target = directory + "/tasks.txt";
-    if (!QFileInfo::exists(target)) {
-        const QString backup = target + ".bak";
-        if (QFileInfo::exists(backup)) {
-            QFile::copy(backup, target);
-        } else {
-            const QStringList legacyFiles = {
-                QCoreApplication::applicationDirPath() + "/tasks.txt",
-                QDir::currentPath() + "/tasks.txt",
-            };
-            for (const QString& legacyFile : legacyFiles) {
-                if (QFileInfo::exists(legacyFile)) {
-                    QFile::copy(legacyFile, target);
-                    break;
-                }
-            }
-        }
-    }
-    return std::filesystem::path(target.toStdWString());
+    return app_paths::resolveDataFile(
+        QCoreApplication::arguments(),
+        QCoreApplication::applicationDirPath(),
+        QDir::currentPath(),
+        directory);
 }
 
 } // namespace
@@ -268,6 +247,7 @@ private:
     bool luoguLoading_ = false;
     QLabel* taskSummary_ = nullptr;
     QCheckBox* pendingOnly_ = nullptr;
+    QLineEdit* taskSearch_ = nullptr;
     QTableWidget* taskTable_ = nullptr;
     QLineEdit* codeforcesHandleInput_ = nullptr;
     QPushButton* codeforcesButton_ = nullptr;
@@ -311,6 +291,16 @@ private:
         cardLayout->addWidget(pendingOnly_);
         layout->addWidget(card);
 
+        auto* searchCard = createCard(page);
+        auto* searchLayout = new QHBoxLayout(searchCard);
+        auto* searchLabel = new QLabel("搜索", searchCard);
+        taskSearch_ = new QLineEdit(searchCard);
+        taskSearch_->setClearButtonEnabled(true);
+        taskSearch_->setPlaceholderText("题目名称、分类或难度");
+        searchLayout->addWidget(searchLabel);
+        searchLayout->addWidget(taskSearch_);
+        layout->addWidget(searchCard);
+
         taskTable_ = new QTableWidget(page);
         taskTable_->setColumnCount(4);
         taskTable_->setHorizontalHeaderLabels({"题目名称", "分类", "难度", "状态"});
@@ -339,12 +329,24 @@ private:
             settings_.setValue("tasks/pendingOnly", checked);
             refreshTasks();
         });
+        connect(taskSearch_, &QLineEdit::textChanged, this, [this] { refreshTasks(); });
         connect(addButton, &QPushButton::clicked, this, [this] { addTask(); });
         connect(editButton, &QPushButton::clicked, this, [this] { editTask(); });
         connect(completeButton, &QPushButton::clicked, this, [this] { completeTask(); });
         connect(pendingButton, &QPushButton::clicked, this, [this] { reopenTask(); });
         connect(deleteButton, &QPushButton::clicked, this, [this] { deleteTask(); });
         connect(taskTable_, &QTableWidget::doubleClicked, this, [this] { editTask(); });
+
+        auto* newShortcut = new QShortcut(QKeySequence::New, this);
+        connect(newShortcut, &QShortcut::activated, this, [this] { addTask(); });
+        auto* findShortcut = new QShortcut(QKeySequence::Find, this);
+        connect(findShortcut, &QShortcut::activated, this, [this] {
+            taskSearch_->setFocus();
+            taskSearch_->selectAll();
+        });
+        auto* deleteShortcut = new QShortcut(QKeySequence::Delete, taskTable_);
+        deleteShortcut->setContext(Qt::WidgetShortcut);
+        connect(deleteShortcut, &QShortcut::activated, this, [this] { deleteTask(); });
         return page;
     }
 
@@ -436,7 +438,9 @@ private:
 
     void refreshTasks() {
         taskTable_->setRowCount(0);
+        const QString keyword = taskSearch_ ? taskSearch_->text().trimmed() : QString();
         int completed = 0;
+        int visible = 0;
 
         for (std::size_t index = 0; index < tasks_.size(); ++index) {
             const Task& task = tasks_[index];
@@ -446,7 +450,15 @@ private:
             if (pendingOnly_->isChecked() && task.completed) {
                 continue;
             }
+            if (!keyword.isEmpty()) {
+                const QString haystack =
+                    taskText(task.title) + ' ' + taskText(task.category) + ' ' + taskText(task.difficulty);
+                if (!haystack.contains(keyword, Qt::CaseInsensitive)) {
+                    continue;
+                }
+            }
 
+            ++visible;
             const int row = taskTable_->rowCount();
             taskTable_->insertRow(row);
             auto* title = new QTableWidgetItem(taskText(task.title));
@@ -457,7 +469,11 @@ private:
             taskTable_->setItem(row, 3, new QTableWidgetItem(task.completed ? "已完成" : "待完成"));
         }
 
-        taskSummary_->setText(QString("共 %1 道题，已完成 %2 道").arg(tasks_.size()).arg(completed));
+        QString summary = QString("共 %1 道题，已完成 %2 道").arg(tasks_.size()).arg(completed);
+        if (visible != static_cast<int>(tasks_.size())) {
+            summary += QString("，当前显示 %1 道").arg(visible);
+        }
+        taskSummary_->setText(summary);
     }
 
     void addTask() {

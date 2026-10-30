@@ -2,35 +2,14 @@
 
 #include <QDir>
 #include <QFile>
-#include <QUuid>
 
 #include <filesystem>
 #include <string>
 
 #include "task_store.h"
+#include "temp_dir.h"
 
 namespace {
-
-class TempDir {
-public:
-    TempDir() {
-        path_ = QDir::tempPath() + "/task_store_test_" + QUuid::createUuid().toString(QUuid::WithoutBraces);
-        valid_ = QDir().mkpath(path_);
-    }
-
-    ~TempDir() {
-        if (valid_) {
-            QDir(path_).removeRecursively();
-        }
-    }
-
-    bool isValid() const { return valid_; }
-    QString filePath(const QString& name) const { return path_ + "/" + name; }
-
-private:
-    QString path_;
-    bool valid_ = false;
-};
 
 std::filesystem::path taskPath(const TempDir& directory, const QString& name = "tasks.txt") {
     return std::filesystem::path(directory.filePath(name).toStdWString());
