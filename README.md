@@ -97,6 +97,7 @@ windeployqt --release --no-translations --compiler-runtime dist\task_notebook_gu
 ├── src/app_paths.*                # 数据目录、迁移与备份恢复
 ├── src/task_export.*              # CSV 导出
 ├── src/task_store.*               # 任务数据读取、转义、备份与原子保存
+├── src/version.h.in               # CMake 生成的版本头模板
 ├── tests/test_task_store.cpp      # 存储层测试（Qt Test）
 ├── tests/test_app_paths.cpp       # 数据目录/迁移测试（Qt Test）
 ├── tests/test_task_export.cpp     # CSV 导出测试（Qt Test）
