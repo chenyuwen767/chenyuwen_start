@@ -3,7 +3,10 @@
 #include <QCloseEvent>
 #include <QCoreApplication>
 #include <QDateTime>
+#include <QDialog>
+#include <QDialogButtonBox>
 #include <QDir>
+#include <QFormLayout>
 #include <QFrame>
 #include <QHeaderView>
 #include <QHBoxLayout>
@@ -54,6 +57,42 @@ QString displayPath(const std::filesystem::path& path) {
 
 QString optionalNumber(const QJsonValue& value) {
     return value.isDouble() ? QString::number(value.toInt()) : QString("未公开");
+}
+
+bool promptTaskFields(QWidget* parent,
+                      const QString& dialogTitle,
+                      QString& title,
+                      QString& category,
+                      QString& difficulty) {
+    QDialog dialog(parent);
+    dialog.setWindowTitle(dialogTitle);
+
+    auto* layout = new QVBoxLayout(&dialog);
+    auto* form = new QFormLayout;
+    auto* titleEdit = new QLineEdit(title, &dialog);
+    auto* categoryEdit = new QLineEdit(category, &dialog);
+    auto* difficultyEdit = new QLineEdit(difficulty, &dialog);
+    form->addRow("题目名称：", titleEdit);
+    form->addRow("分类：", categoryEdit);
+    form->addRow("难度：", difficultyEdit);
+    layout->addLayout(form);
+
+    auto* buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dialog);
+    layout->addWidget(buttons);
+    QObject::connect(buttons, &QDialogButtonBox::accepted, &dialog, &QDialog::accept);
+    QObject::connect(buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
+    titleEdit->setFocus();
+
+    while (dialog.exec() == QDialog::Accepted) {
+        title = titleEdit->text().trimmed();
+        category = categoryEdit->text().trimmed();
+        difficulty = difficultyEdit->text().trimmed();
+        if (!title.isEmpty() && !category.isEmpty() && !difficulty.isEmpty()) {
+            return true;
+        }
+        QMessageBox::warning(&dialog, "无法保存", "题目名称、分类和难度都不能为空。");
+    }
+    return false;
 }
 
 std::filesystem::path resolveDataFile() {
@@ -307,6 +346,8 @@ private:
         taskTable_->setSelectionBehavior(QAbstractItemView::SelectRows);
         taskTable_->setEditTriggers(QAbstractItemView::NoEditTriggers);
         taskTable_->setAlternatingRowColors(true);
+        taskTable_->setSortingEnabled(true);
+        taskTable_->sortByColumn(0, Qt::AscendingOrder);
         taskTable_->horizontalHeader()->setStretchLastSection(true);
         layout->addWidget(taskTable_);
 
@@ -437,6 +478,8 @@ private:
     }
 
     void refreshTasks() {
+        const bool sortingEnabled = taskTable_->isSortingEnabled();
+        taskTable_->setSortingEnabled(false);
         taskTable_->setRowCount(0);
         const QString keyword = taskSearch_ ? taskSearch_->text().trimmed() : QString();
         int completed = 0;
@@ -474,24 +517,14 @@ private:
             summary += QString("，当前显示 %1 道").arg(visible);
         }
         taskSummary_->setText(summary);
+        taskTable_->setSortingEnabled(sortingEnabled);
     }
 
     void addTask() {
-        bool accepted = false;
-        const QString title = QInputDialog::getText(this, "新增题目", "题目名称：", QLineEdit::Normal, {}, &accepted);
-        if (!accepted) {
-            return;
-        }
-        const QString category = QInputDialog::getText(this, "新增题目", "分类：", QLineEdit::Normal, {}, &accepted);
-        if (!accepted) {
-            return;
-        }
-        const QString difficulty = QInputDialog::getText(this, "新增题目", "难度：", QLineEdit::Normal, {}, &accepted);
-        if (!accepted) {
-            return;
-        }
-        if (title.trimmed().isEmpty() || category.trimmed().isEmpty() || difficulty.trimmed().isEmpty()) {
-            QMessageBox::warning(this, "无法新增", "题目名称、分类和难度都不能为空。");
+        QString title;
+        QString category;
+        QString difficulty;
+        if (!promptTaskFields(this, "新增题目", title, category, difficulty)) {
             return;
         }
 
@@ -516,24 +549,10 @@ private:
         }
 
         const Task& task = tasks_[static_cast<std::size_t>(index)];
-        bool accepted = false;
-        const QString title = QInputDialog::getText(
-            this, "编辑题目", "题目名称：", QLineEdit::Normal, taskText(task.title), &accepted);
-        if (!accepted) {
-            return;
-        }
-        const QString category = QInputDialog::getText(
-            this, "编辑题目", "分类：", QLineEdit::Normal, taskText(task.category), &accepted);
-        if (!accepted) {
-            return;
-        }
-        const QString difficulty = QInputDialog::getText(
-            this, "编辑题目", "难度：", QLineEdit::Normal, taskText(task.difficulty), &accepted);
-        if (!accepted) {
-            return;
-        }
-        if (title.trimmed().isEmpty() || category.trimmed().isEmpty() || difficulty.trimmed().isEmpty()) {
-            QMessageBox::warning(this, "无法保存", "题目名称、分类和难度都不能为空。");
+        QString title = taskText(task.title);
+        QString category = taskText(task.category);
+        QString difficulty = taskText(task.difficulty);
+        if (!promptTaskFields(this, "编辑题目", title, category, difficulty)) {
             return;
         }
 
