@@ -721,13 +721,16 @@ private:
     }
 
     void exportTasks() {
-        const QString fileName = QFileDialog::getSaveFileName(
+        QString fileName = QFileDialog::getSaveFileName(
             this,
             "导出任务",
             QDir::homePath() + "/algorithm-tasks.csv",
             "CSV 文件 (*.csv)");
         if (fileName.isEmpty()) {
             return;
+        }
+        if (!fileName.endsWith(".csv", Qt::CaseInsensitive)) {
+            fileName += ".csv";
         }
 
         QSaveFile file(fileName);
