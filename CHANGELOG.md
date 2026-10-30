@@ -6,6 +6,7 @@
 
 ### Added
 
+- MIT 许可证。
 - 任务编辑、删除、标记为待完成。
 - 存储层单元测试（Qt Test），覆盖字段转义、备份、损坏行、旧格式、Unicode 路径。
 - Windows GitHub Actions：构建、测试、`windeployqt` 打包并上传 artifact。

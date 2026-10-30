@@ -82,6 +82,10 @@ windeployqt --release --no-translations dist\task_notebook_gui.exe
 
 项目评估、分阶段路线图与技术演进方案见 [docs/ROADMAP.md](docs/ROADMAP.md)。
 
+## 许可证
+
+本项目使用 MIT 许可证，详见 [LICENSE](LICENSE)。
+
 ## 文件结构
 
 ```text
@@ -93,6 +97,7 @@ windeployqt --release --no-translations dist\task_notebook_gui.exe
 ├── tests/test_app_paths.cpp       # 数据目录/迁移测试（Qt Test）
 ├── docs/ROADMAP.md                # 项目评估与后续发展规划
 ├── CHANGELOG.md                   # 版本变化记录
+├── LICENSE                        # MIT 许可证
 ├── CMakeLists.txt                 # 构建配置
 ├── README.md
 └── .gitignore
