@@ -1,6 +1,10 @@
 #include <QApplication>
 #include <QCheckBox>
+#include <QCoreApplication>
 #include <QDateTime>
+#include <QDir>
+#include <QFile>
+#include <QFileInfo>
 #include <QFrame>
 #include <QHeaderView>
 #include <QHBoxLayout>
@@ -16,6 +20,8 @@
 #include <QNetworkRequest>
 #include <QPushButton>
 #include <QSet>
+#include <QStandardPaths>
+#include <QStringList>
 #include <QTableWidget>
 #include <QTabWidget>
 #include <QTimer>
@@ -24,14 +30,72 @@
 #include <QVBoxLayout>
 #include <QWidget>
 
+#include <filesystem>
 #include <string>
 #include <vector>
 
 #include "task_store.h"
 
+namespace {
+
+QString taskText(const std::string& value) {
+    return QString::fromUtf8(value.c_str());
+}
+
+std::string toTaskText(const QString& value) {
+    return value.toUtf8().toStdString();
+}
+
+QString displayPath(const std::filesystem::path& path) {
+    return QString::fromStdWString(path.wstring());
+}
+
+QString optionalNumber(const QJsonValue& value) {
+    return value.isDouble() ? QString::number(value.toInt()) : QString("未公开");
+}
+
+std::filesystem::path resolveDataFile() {
+    const QStringList arguments = QCoreApplication::arguments();
+    if (arguments.contains("--portable")) {
+        return std::filesystem::path(
+            (QCoreApplication::applicationDirPath() + "/tasks.txt").toStdWString());
+    }
+
+    QString directory = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
+    if (directory.isEmpty() || !QDir().mkpath(directory)) {
+        directory = QCoreApplication::applicationDirPath();
+    }
+
+    const QString target = directory + "/tasks.txt";
+    if (!QFileInfo::exists(target)) {
+        const QString backup = target + ".bak";
+        if (QFileInfo::exists(backup)) {
+            QFile::copy(backup, target);
+        } else {
+            const QStringList legacyFiles = {
+                QCoreApplication::applicationDirPath() + "/tasks.txt",
+                QDir::currentPath() + "/tasks.txt",
+            };
+            for (const QString& legacyFile : legacyFiles) {
+                if (QFileInfo::exists(legacyFile)) {
+                    QFile::copy(legacyFile, target);
+                    break;
+                }
+            }
+        }
+    }
+    return std::filesystem::path(target.toStdWString());
+}
+
+} // namespace
+
 class MainWindow : public QWidget {
 public:
-    MainWindow() : tasks_(loadTasks(dataFile_)), network_(new QNetworkAccessManager(this)) {
+    MainWindow() : dataFile_(resolveDataFile()), network_(new QNetworkAccessManager(this)) {
+        const LoadResult loaded = loadTasksChecked(dataFile_);
+        tasks_ = loaded.tasks;
+        dataLoadFailed_ = !loaded.ok;
+
         setWindowTitle("算法练习任务本");
         resize(960, 680);
         setStyleSheet(R"(
@@ -91,6 +155,12 @@ public:
             }
             QPushButton:disabled {
                 background: #aab8c9;
+            }
+            QPushButton#dangerButton {
+                background: #c9463d;
+            }
+            QPushButton#dangerButton:hover {
+                background: #a9362f;
             }
             QTabWidget::pane {
                 background: white;
@@ -152,18 +222,40 @@ public:
         tabs->addTab(createLuoguPage(), "洛谷");
         layout->addWidget(tabs);
         refreshTasks();
+
+        if (!loaded.ok) {
+            QTimer::singleShot(0, this, [this, message = QString::fromStdString(loaded.error)] {
+                QMessageBox::critical(
+                    this,
+                    "数据读取失败",
+                    QString("无法读取任务数据：%1\n\n路径：%2\n\n为避免覆盖现有数据，继续保存前会再次确认。")
+                        .arg(message, displayPath(dataFile_)));
+            });
+        } else if (!loaded.warnings.empty()) {
+            QStringList warnings;
+            for (const std::string& warning : loaded.warnings) {
+                warnings << QString::fromStdString(warning);
+            }
+            QTimer::singleShot(0, this, [this, text = warnings.join('\n')] {
+                QMessageBox::warning(this, "部分数据未读取", text);
+            });
+        }
     }
 
 private:
-    const std::string dataFile_ = "tasks.txt";
+    const std::filesystem::path dataFile_;
     std::vector<Task> tasks_;
     QNetworkAccessManager* network_;
+    bool dataLoadFailed_ = false;
+    bool codeforcesLoading_ = false;
+    bool luoguLoading_ = false;
     QLabel* taskSummary_ = nullptr;
     QCheckBox* pendingOnly_ = nullptr;
     QTableWidget* taskTable_ = nullptr;
     QLineEdit* codeforcesHandleInput_ = nullptr;
     QPushButton* codeforcesButton_ = nullptr;
     QLabel* codeforcesSummary_ = nullptr;
+    QString codeforcesProfileSummary_;
     QTableWidget* codeforcesSubmissionsTable_ = nullptr;
     QLineEdit* luoguHandleInput_ = nullptr;
     QPushButton* luoguButton_ = nullptr;
@@ -213,15 +305,26 @@ private:
 
         auto* buttons = new QHBoxLayout;
         auto* addButton = new QPushButton("新增题目", page);
+        auto* editButton = new QPushButton("编辑题目", page);
         auto* completeButton = new QPushButton("标记为完成", page);
+        auto* pendingButton = new QPushButton("标记为待完成", page);
+        auto* deleteButton = new QPushButton("删除题目", page);
+        deleteButton->setObjectName("dangerButton");
         buttons->addWidget(addButton);
+        buttons->addWidget(editButton);
         buttons->addWidget(completeButton);
+        buttons->addWidget(pendingButton);
+        buttons->addWidget(deleteButton);
         buttons->addStretch();
         layout->addLayout(buttons);
 
         connect(pendingOnly_, &QCheckBox::toggled, this, [this] { refreshTasks(); });
         connect(addButton, &QPushButton::clicked, this, [this] { addTask(); });
+        connect(editButton, &QPushButton::clicked, this, [this] { editTask(); });
         connect(completeButton, &QPushButton::clicked, this, [this] { completeTask(); });
+        connect(pendingButton, &QPushButton::clicked, this, [this] { reopenTask(); });
+        connect(deleteButton, &QPushButton::clicked, this, [this] { deleteTask(); });
+        connect(taskTable_, &QTableWidget::doubleClicked, this, [this] { editTask(); });
         return page;
     }
 
@@ -326,11 +429,11 @@ private:
 
             const int row = taskTable_->rowCount();
             taskTable_->insertRow(row);
-            auto* title = new QTableWidgetItem(QString::fromUtf8(task.title.c_str()));
+            auto* title = new QTableWidgetItem(taskText(task.title));
             title->setData(Qt::UserRole, static_cast<int>(index));
             taskTable_->setItem(row, 0, title);
-            taskTable_->setItem(row, 1, new QTableWidgetItem(QString::fromUtf8(task.category.c_str())));
-            taskTable_->setItem(row, 2, new QTableWidgetItem(QString::fromUtf8(task.difficulty.c_str())));
+            taskTable_->setItem(row, 1, new QTableWidgetItem(taskText(task.category)));
+            taskTable_->setItem(row, 2, new QTableWidgetItem(taskText(task.difficulty)));
             taskTable_->setItem(row, 3, new QTableWidgetItem(task.completed ? "已完成" : "待完成"));
         }
 
@@ -356,27 +459,118 @@ private:
             return;
         }
 
-        tasks_.push_back({title.toUtf8().toStdString(), category.toUtf8().toStdString(), difficulty.toUtf8().toStdString(), false});
+        tasks_.push_back({toTaskText(title), toTaskText(category), toTaskText(difficulty), false});
         saveAndRefresh();
     }
 
-    void completeTask() {
+    int selectedTaskIndex() const {
         const int row = taskTable_->currentRow();
         if (row < 0) {
+            return -1;
+        }
+        const QTableWidgetItem* item = taskTable_->item(row, 0);
+        return item ? item->data(Qt::UserRole).toInt() : -1;
+    }
+
+    void editTask() {
+        const int index = selectedTaskIndex();
+        if (index < 0) {
             QMessageBox::information(this, "请选择题目", "请先在表格中选择一道题目。");
             return;
         }
 
-        const int index = taskTable_->item(row, 0)->data(Qt::UserRole).toInt();
-        tasks_[index].completed = true;
+        const Task& task = tasks_[static_cast<std::size_t>(index)];
+        bool accepted = false;
+        const QString title = QInputDialog::getText(
+            this, "编辑题目", "题目名称：", QLineEdit::Normal, taskText(task.title), &accepted);
+        if (!accepted) {
+            return;
+        }
+        const QString category = QInputDialog::getText(
+            this, "编辑题目", "分类：", QLineEdit::Normal, taskText(task.category), &accepted);
+        if (!accepted) {
+            return;
+        }
+        const QString difficulty = QInputDialog::getText(
+            this, "编辑题目", "难度：", QLineEdit::Normal, taskText(task.difficulty), &accepted);
+        if (!accepted) {
+            return;
+        }
+        if (title.trimmed().isEmpty() || category.trimmed().isEmpty() || difficulty.trimmed().isEmpty()) {
+            QMessageBox::warning(this, "无法保存", "题目名称、分类和难度都不能为空。");
+            return;
+        }
+
+        tasks_[static_cast<std::size_t>(index)].title = toTaskText(title);
+        tasks_[static_cast<std::size_t>(index)].category = toTaskText(category);
+        tasks_[static_cast<std::size_t>(index)].difficulty = toTaskText(difficulty);
+        saveAndRefresh();
+    }
+
+    void completeTask() {
+        setTaskCompleted(true);
+    }
+
+    void reopenTask() {
+        setTaskCompleted(false);
+    }
+
+    void setTaskCompleted(bool completed) {
+        const int index = selectedTaskIndex();
+        if (index < 0) {
+            QMessageBox::information(this, "请选择题目", "请先在表格中选择一道题目。");
+            return;
+        }
+        tasks_[static_cast<std::size_t>(index)].completed = completed;
+        saveAndRefresh();
+    }
+
+    void deleteTask() {
+        const int index = selectedTaskIndex();
+        if (index < 0) {
+            QMessageBox::information(this, "请选择题目", "请先在表格中选择一道题目。");
+            return;
+        }
+
+        const QString title = taskText(tasks_[static_cast<std::size_t>(index)].title);
+        const auto answer = QMessageBox::question(
+            this,
+            "删除题目",
+            QString("确定删除“%1”吗？\n\n此操作不可撤销。").arg(title),
+            QMessageBox::Yes | QMessageBox::No,
+            QMessageBox::No);
+        if (answer != QMessageBox::Yes) {
+            return;
+        }
+
+        tasks_.erase(tasks_.begin() + index);
         saveAndRefresh();
     }
 
     void saveAndRefresh() {
-        if (!saveTasks(tasks_, dataFile_)) {
-            QMessageBox::critical(this, "保存失败", "无法写入 tasks.txt。");
+        if (dataLoadFailed_) {
+            const auto answer = QMessageBox::warning(
+                this,
+                "数据尚未成功读取",
+                "启动时未能读取原任务数据。继续保存会用当前列表覆盖数据文件。\n\n是否继续？",
+                QMessageBox::Yes | QMessageBox::No,
+                QMessageBox::No);
+            if (answer != QMessageBox::Yes) {
+                return;
+            }
+        }
+
+        std::string error;
+        if (!saveTasksChecked(tasks_, dataFile_, error)) {
+            QMessageBox::critical(
+                this,
+                "保存失败",
+                QString("无法写入任务数据：%1\n\n路径：%2")
+                    .arg(QString::fromStdString(error), displayPath(dataFile_)));
             return;
         }
+
+        dataLoadFailed_ = false;
         refreshTasks();
     }
 
@@ -392,8 +586,14 @@ private:
         return url;
     }
 
-    QNetworkRequest luoguRequest(const QUrl& url) const {
+    QNetworkRequest networkRequest(const QUrl& url) const {
         QNetworkRequest request(url);
+        request.setTransferTimeout(15000);
+        return request;
+    }
+
+    QNetworkRequest luoguRequest(const QUrl& url) const {
+        QNetworkRequest request = networkRequest(url);
         request.setHeader(QNetworkRequest::UserAgentHeader, "AlgorithmPracticeNotebook/1.0");
         return request;
     }
@@ -439,22 +639,28 @@ private:
     }
 
     void loadCodeforcesAccount() {
+        if (codeforcesLoading_) {
+            return;
+        }
+
         const QString handle = codeforcesHandleInput_->text().trimmed();
         if (handle.isEmpty()) {
             QMessageBox::information(this, "需要账号", "请输入 Codeforces handle。");
             return;
         }
 
+        codeforcesLoading_ = true;
         codeforcesButton_->setEnabled(false);
         codeforcesSummary_->setText("正在查询账号资料……");
         codeforcesSubmissionsTable_->setRowCount(0);
 
-        auto* reply = network_->get(QNetworkRequest(codeforcesApiUrl("user.info", "handles", handle)));
+        auto* reply = network_->get(networkRequest(codeforcesApiUrl("user.info", "handles", handle)));
         connect(reply, &QNetworkReply::finished, this, [this, reply, handle] {
             QJsonArray users;
             QString error;
             if (!readCodeforcesResult(reply, users, error) || users.isEmpty()) {
                 reply->deleteLater();
+                codeforcesLoading_ = false;
                 codeforcesSummary_->setText("查询失败：" + error);
                 codeforcesButton_->setEnabled(true);
                 return;
@@ -464,11 +670,12 @@ private:
             const QString rank = user.value("rank").toString("未定级");
             const QString rating = user.contains("rating") ? QString::number(user.value("rating").toInt()) : "暂无";
             const QString maxRating = user.contains("maxRating") ? QString::number(user.value("maxRating").toInt()) : "暂无";
-            codeforcesSummary_->setText(QString("%1（%2）  当前 rating：%3  最高 rating：%4\n正在读取最近提交……")
+            codeforcesProfileSummary_ = QString("%1（%2）  当前 rating：%3  最高 rating：%4")
                                             .arg(user.value("handle").toString(handle))
                                             .arg(rank)
                                             .arg(rating)
-                                            .arg(maxRating));
+                                            .arg(maxRating);
+            codeforcesSummary_->setText(codeforcesProfileSummary_ + "\n正在读取最近提交……");
             reply->deleteLater();
 
             QTimer::singleShot(2100, this, [this, handle] { loadRecentCodeforcesSubmissions(handle); });
@@ -476,13 +683,14 @@ private:
     }
 
     void loadRecentCodeforcesSubmissions(const QString& handle) {
-        auto* reply = network_->get(QNetworkRequest(codeforcesApiUrl("user.status", "handle", handle)));
+        auto* reply = network_->get(networkRequest(codeforcesApiUrl("user.status", "handle", handle)));
         connect(reply, &QNetworkReply::finished, this, [this, reply] {
             QJsonArray submissions;
             QString error;
             if (!readCodeforcesResult(reply, submissions, error)) {
                 reply->deleteLater();
-                codeforcesSummary_->setText(codeforcesSummary_->text() + "\n提交记录读取失败：" + error);
+                codeforcesLoading_ = false;
+                codeforcesSummary_->setText(codeforcesProfileSummary_ + "\n提交记录读取失败：" + error);
                 codeforcesButton_->setEnabled(true);
                 return;
             }
@@ -498,11 +706,14 @@ private:
                               problem.value("index").toString());
             }
 
-            codeforcesSummary_->setText(codeforcesSummary_->text().replace(
-                "正在读取最近提交……",
-                QString("最近 1000 次提交中通过 %1 道不同题目；返回提交数：%2").arg(solved.size()).arg(submissions.size())));
+            codeforcesSummary_->setText(
+                codeforcesProfileSummary_ +
+                QString("\n最近 1000 次提交中通过 %1 道不同题目；返回提交数：%2")
+                    .arg(solved.size())
+                    .arg(submissions.size()));
             showCodeforcesSubmissions(submissions);
             reply->deleteLater();
+            codeforcesLoading_ = false;
             codeforcesButton_->setEnabled(true);
         });
     }
@@ -531,12 +742,17 @@ private:
     }
 
     void loadLuoguAccount() {
+        if (luoguLoading_) {
+            return;
+        }
+
         const QString account = luoguHandleInput_->text().trimmed();
         if (account.isEmpty()) {
             QMessageBox::information(this, "需要账号", "请输入洛谷用户名或 UID。");
             return;
         }
 
+        luoguLoading_ = true;
         luoguButton_->setEnabled(false);
         luoguSummary_->setText("正在查询公开资料……");
         luoguDetails_->setText("正在读取账号统计……");
@@ -605,25 +821,27 @@ private:
 
             const QString elo = user.value("eloValue").isDouble()
                 ? QString::number(user.value("eloValue").toDouble(), 'f', 0)
-                : "暂无";
+                : "未公开";
             luoguSummary_->setText(QString("%1（UID：%2）\n通过 %3 题 · 提交 %4 题 · 等级分：%5")
                                        .arg(user.value("name").toString())
                                        .arg(user.value("uid").toInt())
-                                       .arg(user.value("passedProblemCount").toInt())
-                                       .arg(user.value("submittedProblemCount").toInt())
+                                       .arg(optionalNumber(user.value("passedProblemCount")))
+                                       .arg(optionalNumber(user.value("submittedProblemCount")))
                                        .arg(elo));
             luoguDetails_->setText(QString("CCF 等级：%1  ·  XCPC 等级：%2  ·  关注：%3  ·  粉丝：%4\n%5")
-                                      .arg(user.value("ccfLevel").toInt())
-                                      .arg(user.value("xcpcLevel").toInt())
-                                      .arg(user.value("followingCount").toInt())
-                                      .arg(user.value("followerCount").toInt())
+                                      .arg(optionalNumber(user.value("ccfLevel")))
+                                      .arg(optionalNumber(user.value("xcpcLevel")))
+                                      .arg(optionalNumber(user.value("followingCount")))
+                                      .arg(optionalNumber(user.value("followerCount")))
                                       .arg(user.value("slogan").toString("这个人很懒，什么都没写")));
             reply->deleteLater();
+            luoguLoading_ = false;
             luoguButton_->setEnabled(true);
         });
     }
 
     void showLuoguError(const QString& error) {
+        luoguLoading_ = false;
         luoguSummary_->setText("查询失败：" + error);
         luoguDetails_->setText("请检查用户名或 UID，并确认账号资料公开可见。");
         luoguButton_->setEnabled(true);
@@ -632,6 +850,9 @@ private:
 
 int main(int argc, char* argv[]) {
     QApplication application(argc, argv);
+    QCoreApplication::setOrganizationName("chenyuwen");
+    QCoreApplication::setApplicationName("AlgorithmPracticeNotebook");
+    QCoreApplication::setApplicationVersion("0.3.1");
     MainWindow window;
     window.show();
     return application.exec();

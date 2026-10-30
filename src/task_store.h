@@ -1,5 +1,6 @@
 #pragma once
 
+#include <filesystem>
 #include <string>
 #include <vector>
 
@@ -10,5 +11,16 @@ struct Task {
     bool completed = false;
 };
 
-std::vector<Task> loadTasks(const std::string& fileName);
-bool saveTasks(const std::vector<Task>& tasks, const std::string& fileName);
+struct LoadResult {
+    std::vector<Task> tasks;
+    bool ok = true;
+    std::string error;
+    std::vector<std::string> warnings;
+};
+
+LoadResult loadTasksChecked(const std::filesystem::path& fileName);
+std::vector<Task> loadTasks(const std::filesystem::path& fileName);
+bool saveTasksChecked(const std::vector<Task>& tasks,
+                      const std::filesystem::path& fileName,
+                      std::string& error);
+bool saveTasks(const std::vector<Task>& tasks, const std::filesystem::path& fileName);

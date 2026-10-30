@@ -1,0 +1,26 @@
+# Changelog
+
+本项目的主要变化记录在这里。版本号遵循语义化版本。
+
+## [Unreleased] - v0.3.1
+
+### Added
+
+- 任务编辑、删除、标记为待完成。
+- 存储层单元测试（Qt Test），覆盖字段转义、备份、损坏行、旧格式、Unicode 路径。
+- Windows GitHub Actions：构建、测试、`windeployqt` 打包并上传 artifact。
+- `--portable` 模式：数据文件放在 exe 同目录。
+
+### Changed
+
+- 任务数据默认保存到 `%APPDATA%\chenyuwen\AlgorithmPracticeNotebook\tasks.txt`，不再依赖启动目录。
+- 保存改为临时文件 + 原子替换，并保留上一版 `tasks.txt.bak`。
+- 存储格式增加版本头，字段中的 Tab、换行、反斜杠会被转义；旧格式仍按原样读取。
+- 首次启动会从 exe 同目录或当前目录迁移旧 `tasks.txt`；若主文件缺失但 `.bak` 存在，会先恢复备份。
+- 加载失败或部分行损坏时会提示用户；加载失败时继续保存需要二次确认。
+
+### Fixed
+
+- 网络请求增加 15 秒超时，查询期间重复按回车不会重复发起请求。
+- 洛谷公开资料中的 `null` 字段显示为“未公开”，不再错误显示为 0。
+- Codeforces 摘要文案改为结构化拼接，不再依赖字符串替换占位符。

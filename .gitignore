@@ -5,6 +5,8 @@ build/
 
 # Local task data created by the program
 tasks.txt
+tasks.txt.bak
+tasks.txt.tmp
 
 # Editor settings
 .vscode/
