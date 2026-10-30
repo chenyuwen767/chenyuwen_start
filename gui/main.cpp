@@ -955,8 +955,12 @@ private:
 
             const QJsonObject user = users.first().toObject();
             const QString rank = user.value("rank").toString("未定级");
-            const QString rating = user.contains("rating") ? QString::number(user.value("rating").toInt()) : "暂无";
-            const QString maxRating = user.contains("maxRating") ? QString::number(user.value("maxRating").toInt()) : "暂无";
+            const QString rating = user.value("rating").isDouble()
+                ? QString::number(user.value("rating").toInt())
+                : "暂无";
+            const QString maxRating = user.value("maxRating").isDouble()
+                ? QString::number(user.value("maxRating").toInt())
+                : "暂无";
             codeforcesProfileSummary_ = QString("%1（%2）  当前 rating：%3  最高 rating：%4")
                                             .arg(user.value("handle").toString(handle))
                                             .arg(rank)
