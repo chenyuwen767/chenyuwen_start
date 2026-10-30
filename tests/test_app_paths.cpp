@@ -39,6 +39,7 @@ private slots:
     void migratesFromCurrentDirectory();
     void restoresBackup();
     void keepsExistingFile();
+    void normalDataDirectoryHasNoWarning();
     void fallsBackWhenDataDirectoryIsUnavailable();
 };
 
@@ -144,18 +145,34 @@ void AppPathsTest::keepsExistingFile() {
     QCOMPARE(readFile(dataDirectory.filePath("tasks.txt")), QByteArray("current"));
 }
 
+void AppPathsTest::normalDataDirectoryHasNoWarning() {
+    TempDir applicationDirectory;
+    TempDir currentDirectory;
+    TempDir dataDirectory;
+
+    const auto info = app_paths::resolveDataFileInfo(
+        {},
+        applicationDirectory.path(),
+        currentDirectory.path(),
+        dataDirectory.path());
+
+    QCOMPARE(pathOf(info.path), dataDirectory.filePath("tasks.txt"));
+    QVERIFY(info.warning.isEmpty());
+}
+
 void AppPathsTest::fallsBackWhenDataDirectoryIsUnavailable() {
     TempDir applicationDirectory;
     TempDir currentDirectory;
     QVERIFY(writeFile(applicationDirectory.filePath("blocked"), "not-a-directory"));
 
-    const auto resolved = app_paths::resolveDataFile(
+    const auto info = app_paths::resolveDataFileInfo(
         {},
         applicationDirectory.path(),
         currentDirectory.path(),
         applicationDirectory.filePath("blocked"));
 
-    QCOMPARE(pathOf(resolved), applicationDirectory.filePath("tasks.txt"));
+    QCOMPARE(pathOf(info.path), applicationDirectory.filePath("tasks.txt"));
+    QVERIFY(!info.warning.isEmpty());
 }
 
 int main(int argc, char** argv) {

@@ -49,6 +49,7 @@ ctest --test-dir build --output-on-failure
 ```
 
 - 首次启动时，如果该文件不存在，程序会尝试从 exe 同目录或当前目录的旧 `tasks.txt` 迁移。
+- 如果 AppData 不可写，程序会自动降级到程序所在目录或临时目录，并提示实际数据位置。
 - 如果主文件缺失但 `tasks.txt.bak` 存在，会先尝试从备份恢复。
 - 每次保存会先把上一版保留为 `tasks.txt.bak`，再原子替换 `tasks.txt`。
 - 使用 `task_notebook_gui.exe --portable` 可以把数据放在 exe 同目录，便于 U 盘或绿色版使用。

@@ -3,6 +3,7 @@
 #include <QCheckBox>
 #include <QCloseEvent>
 #include <QCoreApplication>
+#include <QCryptographicHash>
 #include <QDateTime>
 #include <QDesktopServices>
 #include <QDialog>
@@ -43,6 +44,7 @@
 #include <QWidget>
 
 #include <filesystem>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -113,12 +115,12 @@ bool promptTaskFields(QWidget* parent,
     return false;
 }
 
-std::filesystem::path resolveDataFile() {
+app_paths::DataFileInfo resolveDataFileInfo() {
     QString directory = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
     if (directory.isEmpty()) {
         directory = QCoreApplication::applicationDirPath();
     }
-    return app_paths::resolveDataFile(
+    return app_paths::resolveDataFileInfo(
         QCoreApplication::arguments(),
         QCoreApplication::applicationDirPath(),
         QDir::currentPath(),
@@ -129,7 +131,10 @@ std::filesystem::path resolveDataFile() {
 
 class MainWindow : public QWidget {
 public:
-    MainWindow() : dataFile_(resolveDataFile()), network_(new QNetworkAccessManager(this)) {
+    explicit MainWindow(app_paths::DataFileInfo dataInfo)
+        : dataFile_(dataInfo.path),
+          dataWarning_(dataInfo.warning),
+          network_(new QNetworkAccessManager(this)) {
         const LoadResult loaded = loadTasksChecked(dataFile_);
         tasks_ = loaded.tasks;
         dataLoadFailed_ = !loaded.ok || !loaded.warnings.empty();
@@ -322,6 +327,15 @@ public:
                     text + "\n\n继续修改并保存会以当前列表为准，被跳过的行无法恢复。");
             });
         }
+
+        if (!dataWarning_.isEmpty()) {
+            QTimer::singleShot(0, this, [this] {
+                QMessageBox::warning(
+                    this,
+                    "数据目录不可写",
+                    dataWarning_ + "\n\n当前数据文件：\n" + displayPath(dataFile_));
+            });
+        }
     }
 
 protected:
@@ -332,6 +346,7 @@ protected:
 
 private:
     const std::filesystem::path dataFile_;
+    QString dataWarning_;
     std::vector<Task> tasks_;
     TaskHistory history_;
     QNetworkAccessManager* network_;
@@ -1189,20 +1204,53 @@ int main(int argc, char* argv[]) {
     QCoreApplication::setApplicationName("AlgorithmPracticeNotebook");
     QCoreApplication::setApplicationVersion(APP_VERSION);
 
-    const std::filesystem::path dataFile = resolveDataFile();
-    QLockFile instanceLock(QString::fromStdWString(
+    app_paths::DataFileInfo dataInfo = resolveDataFileInfo();
+    const std::filesystem::path dataFile = dataInfo.path;
+
+    auto makeLock = [](const QString& path) {
+        return std::make_unique<QLockFile>(path);
+    };
+
+    std::unique_ptr<QLockFile> instanceLock = makeLock(QString::fromStdWString(
         (dataFile.parent_path() / "algorithm_notebook.lock").wstring()));
-    if (!instanceLock.tryLock(100)) {
+    bool locked = instanceLock->tryLock(1500);
+
+    if (!locked && instanceLock->error() == QLockFile::PermissionError) {
+        const QByteArray digest = QCryptographicHash::hash(
+            displayPath(dataFile).toUtf8(), QCryptographicHash::Sha256).toHex();
+        const QString fallbackPath = QDir::tempPath() + "/algorithm_notebook_" +
+                                     QString::fromLatin1(digest.left(16)) + ".lock";
+        auto fallbackLock = makeLock(fallbackPath);
+        if (fallbackLock->tryLock(500)) {
+            instanceLock = std::move(fallbackLock);
+            locked = true;
+            const QString note = "无法在数据目录创建锁文件，已改用临时锁。";
+            dataInfo.warning = dataInfo.warning.isEmpty() ? note : dataInfo.warning + "\n\n" + note;
+        }
+    }
+
+    if (!locked) {
+        QString reason;
+        switch (instanceLock->error()) {
+        case QLockFile::LockFailedError:
+            reason = "另一个实例正在使用同一份任务数据。";
+            break;
+        case QLockFile::PermissionError:
+            reason = "没有权限创建锁文件，请检查数据目录权限。";
+            break;
+        default:
+            reason = "无法创建锁文件。";
+            break;
+        }
         QMessageBox::warning(
             nullptr,
             "无法启动",
-            QString("无法独占任务数据文件：\n%1\n\n"
-                    "可能已有另一个实例在运行，或数据目录不可写。")
-                .arg(displayPath(dataFile)));
+            QString("无法独占任务数据文件：\n%1\n\n锁文件：\n%2\n\n%3")
+                .arg(displayPath(dataFile), instanceLock->fileName(), reason));
         return 1;
     }
 
-    MainWindow window;
+    MainWindow window(dataInfo);
     window.show();
 
     // Used by CI and local smoke checks: construct the real window, optionally
