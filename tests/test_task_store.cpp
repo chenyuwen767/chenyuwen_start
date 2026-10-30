@@ -221,6 +221,9 @@ void TaskStoreTest::saveFailsWhenParentDirectoryIsMissing() {
     QVERIFY(!error.empty());
 }
 
-QTEST_APPLESS_MAIN(TaskStoreTest)
+int main(int argc, char** argv) {
+    TaskStoreTest instance;
+    return QTest::qExec(&instance, argc, argv);
+}
 
 #include "test_task_store.moc"

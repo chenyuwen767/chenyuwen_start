@@ -258,6 +258,8 @@ public:
         });
         auto* exportAction = fileMenu->addAction("导出为 CSV…");
         QObject::connect(exportAction, &QAction::triggered, this, [this] { exportTasks(); });
+        auto* importAction = fileMenu->addAction("从 CSV 导入…");
+        QObject::connect(importAction, &QAction::triggered, this, [this] { importTasks(); });
         auto* restoreAction = fileMenu->addAction("从备份恢复…");
         QObject::connect(restoreAction, &QAction::triggered, this, [this] { restoreBackup(); });
         fileMenu->addSeparator();
@@ -723,6 +725,54 @@ private:
         dataLoadFailed_ = !loaded.ok || !loaded.warnings.empty();
         refreshTasks();
         QMessageBox::information(this, "恢复完成", "已从备份恢复任务数据。");
+    }
+
+    void importTasks() {
+        const QString fileName = QFileDialog::getOpenFileName(
+            this,
+            "导入任务",
+            QDir::homePath(),
+            "CSV 文件 (*.csv)");
+        if (fileName.isEmpty()) {
+            return;
+        }
+
+        QFile file(fileName);
+        if (!file.open(QIODevice::ReadOnly)) {
+            QMessageBox::critical(this, "导入失败", file.errorString());
+            return;
+        }
+
+        std::vector<Task> imported;
+        std::string error;
+        if (!tasksFromCsv(file.readAll().toStdString(), imported, error)) {
+            QMessageBox::critical(this, "导入失败", QString::fromStdString(error));
+            return;
+        }
+        if (imported.empty()) {
+            QMessageBox::information(this, "没有任务", "CSV 中没有可导入的任务。");
+            return;
+        }
+
+        QMessageBox box(
+            QMessageBox::Question,
+            "导入任务",
+            QString("读取到 %1 条任务。\n\n追加到现有列表，还是替换现有列表？").arg(imported.size()),
+            QMessageBox::NoButton,
+            this);
+        auto* appendButton = box.addButton("追加", QMessageBox::AcceptRole);
+        auto* replaceButton = box.addButton("替换", QMessageBox::DestructiveRole);
+        box.addButton("取消", QMessageBox::RejectRole);
+        box.exec();
+
+        if (box.clickedButton() == appendButton) {
+            tasks_.insert(tasks_.end(), imported.begin(), imported.end());
+        } else if (box.clickedButton() == replaceButton) {
+            tasks_ = imported;
+        } else {
+            return;
+        }
+        saveAndRefresh();
     }
 
     void exportTasks() {

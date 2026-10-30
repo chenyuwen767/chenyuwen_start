@@ -158,6 +158,9 @@ void AppPathsTest::fallsBackWhenDataDirectoryIsUnavailable() {
     QCOMPARE(pathOf(resolved), applicationDirectory.filePath("tasks.txt"));
 }
 
-QTEST_APPLESS_MAIN(AppPathsTest)
+int main(int argc, char** argv) {
+    AppPathsTest instance;
+    return QTest::qExec(&instance, argc, argv);
+}
 
 #include "test_app_paths.moc"
