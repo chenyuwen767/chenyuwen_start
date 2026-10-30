@@ -2,6 +2,8 @@
 
 一个为算法学习者准备的 Qt 6 桌面任务本。它帮助你记录正在练习的题目、标记完成状态，并查看公开的 Codeforces 和洛谷账号进度。
 
+![算法练习任务本界面](docs/screenshot.png)
+
 ## 本项目能做什么？
 
 - 在桌面界面中新增、编辑、删除练习题，并标记完成或待完成。
@@ -108,6 +110,7 @@ windeployqt --release --no-translations --compiler-runtime dist\task_notebook_gu
 ├── tests/test_task_export.cpp     # CSV 导出测试（Qt Test）
 ├── docs/ROADMAP.md                # 项目评估与后续发展规划
 ├── docs/RELEASE.md                # 发布检查清单
+├── docs/screenshot.png            # 界面截图
 ├── CHANGELOG.md                   # 版本变化记录
 ├── LICENSE                        # MIT 许可证
 ├── CMakeLists.txt                 # 构建配置
