@@ -1,8 +1,10 @@
 #include <QApplication>
+#include <QAction>
 #include <QCheckBox>
 #include <QCloseEvent>
 #include <QCoreApplication>
 #include <QDateTime>
+#include <QDesktopServices>
 #include <QDialog>
 #include <QDialogButtonBox>
 #include <QDir>
@@ -16,6 +18,8 @@
 #include <QJsonObject>
 #include <QLabel>
 #include <QLineEdit>
+#include <QMenu>
+#include <QMenuBar>
 #include <QMessageBox>
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
@@ -232,6 +236,28 @@ public:
         auto* layout = new QVBoxLayout(this);
         layout->setContentsMargins(22, 18, 22, 22);
         layout->setSpacing(14);
+
+        auto* menuBar = new QMenuBar(this);
+        auto* fileMenu = menuBar->addMenu("文件");
+        auto* openDataAction = fileMenu->addAction("打开数据目录");
+        QObject::connect(openDataAction, &QAction::triggered, this, [this] {
+            QDesktopServices::openUrl(QUrl::fromLocalFile(displayPath(dataFile_.parent_path())));
+        });
+        fileMenu->addSeparator();
+        auto* quitAction = fileMenu->addAction("退出");
+        QObject::connect(quitAction, &QAction::triggered, this, &QWidget::close);
+
+        auto* helpMenu = menuBar->addMenu("帮助");
+        auto* aboutAction = helpMenu->addAction("关于");
+        QObject::connect(aboutAction, &QAction::triggered, this, [this] {
+            QMessageBox::about(
+                this,
+                "关于算法练习任务本",
+                QString("算法练习任务本 %1\n\n数据文件：%2\n\n"
+                        "仅读取 Codeforces 与洛谷的公开数据，不保存或传输账号密码。")
+                    .arg(QCoreApplication::applicationVersion(), displayPath(dataFile_)));
+        });
+        layout->setMenuBar(menuBar);
 
         auto* title = new QLabel("算法练习任务本", this);
         title->setObjectName("appTitle");
