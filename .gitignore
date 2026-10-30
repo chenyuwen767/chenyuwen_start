@@ -1,7 +1,12 @@
 # Build outputs
 build/
+build-*/
 *.exe
 *.out
+
+# Packaging output
+dist/
+*.zip
 
 # Local task data created by the program
 tasks.txt
