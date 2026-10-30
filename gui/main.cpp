@@ -547,7 +547,11 @@ private:
             taskTable_->setItem(row, 3, new QTableWidgetItem(task.completed ? "已完成" : "待完成"));
         }
 
-        QString summary = QString("共 %1 道题，已完成 %2 道").arg(tasks_.size()).arg(completed);
+        QString summary = QString("共 %1 道题，已完成 %2 道（%3%）")
+                              .arg(tasks_.size())
+                              .arg(completed)
+                              .arg(tasks_.empty() ? 0
+                                                  : completed * 100 / static_cast<int>(tasks_.size()));
         if (visible != static_cast<int>(tasks_.size())) {
             summary += QString("，当前显示 %1 道").arg(visible);
         }
@@ -562,9 +566,32 @@ private:
         if (!promptTaskFields(this, "新增题目", title, category, difficulty)) {
             return;
         }
+        if (taskTitleExists(title)) {
+            const auto answer = QMessageBox::question(
+                this,
+                "题目已存在",
+                QString("“%1”已经在任务列表中，仍要再添加一条吗？").arg(title),
+                QMessageBox::Yes | QMessageBox::No,
+                QMessageBox::No);
+            if (answer != QMessageBox::Yes) {
+                return;
+            }
+        }
 
         tasks_.push_back({toTaskText(title), toTaskText(category), toTaskText(difficulty), false});
         saveAndRefresh();
+    }
+
+    bool taskTitleExists(const QString& title, int ignoredIndex = -1) const {
+        for (std::size_t index = 0; index < tasks_.size(); ++index) {
+            if (static_cast<int>(index) == ignoredIndex) {
+                continue;
+            }
+            if (taskText(tasks_[index].title).compare(title, Qt::CaseInsensitive) == 0) {
+                return true;
+            }
+        }
+        return false;
     }
 
     int selectedTaskIndex() const {
@@ -589,6 +616,17 @@ private:
         QString difficulty = taskText(task.difficulty);
         if (!promptTaskFields(this, "编辑题目", title, category, difficulty)) {
             return;
+        }
+        if (taskTitleExists(title, index)) {
+            const auto answer = QMessageBox::question(
+                this,
+                "题目已存在",
+                QString("“%1”已经出现在任务列表中，仍要保存吗？").arg(title),
+                QMessageBox::Yes | QMessageBox::No,
+                QMessageBox::No);
+            if (answer != QMessageBox::Yes) {
+                return;
+            }
         }
 
         tasks_[static_cast<std::size_t>(index)].title = toTaskText(title);
