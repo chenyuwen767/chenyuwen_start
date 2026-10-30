@@ -98,6 +98,12 @@ void TaskStoreTest::createsBackupOfPreviousVersion() {
     QVERIFY(current.ok);
     QCOMPARE(static_cast<int>(current.tasks.size()), 1);
     QCOMPARE(textOf(current.tasks[0].title), QString("second"));
+
+    QVERIFY(saveTasks({{"third", "cat", "diff", false}}, path));
+    const LoadResult rotatedBackup = loadTasksChecked(backupPath);
+    QVERIFY(rotatedBackup.ok);
+    QCOMPARE(static_cast<int>(rotatedBackup.tasks.size()), 1);
+    QCOMPARE(textOf(rotatedBackup.tasks[0].title), QString("second"));
 }
 
 void TaskStoreTest::reportsMalformedLinesWithoutDroppingValidOnes() {
