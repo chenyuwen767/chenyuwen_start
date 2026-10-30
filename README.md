@@ -36,7 +36,7 @@ ctest --test-dir build --output-on-failure
 .\build\task_notebook_gui.exe
 ```
 
-如果使用 Visual Studio 多配置生成器，运行时请进入 `build\Release` 或给命令加上 `--config Release`。
+如果使用 Visual Studio 多配置生成器，构建和运行时请加 `--config Release`，测试时加 `-C Release`。
 
 ## 数据保存在哪里
 
