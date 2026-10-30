@@ -8,6 +8,7 @@
 #include <QDialog>
 #include <QDialogButtonBox>
 #include <QDir>
+#include <QFile>
 #include <QFileDialog>
 #include <QFormLayout>
 #include <QFrame>
@@ -254,6 +255,8 @@ public:
         });
         auto* exportAction = fileMenu->addAction("导出为 CSV…");
         QObject::connect(exportAction, &QAction::triggered, this, [this] { exportTasks(); });
+        auto* restoreAction = fileMenu->addAction("从备份恢复…");
+        QObject::connect(restoreAction, &QAction::triggered, this, [this] { restoreBackup(); });
         fileMenu->addSeparator();
         auto* quitAction = fileMenu->addAction("退出");
         QObject::connect(quitAction, &QAction::triggered, this, &QWidget::close);
@@ -678,6 +681,43 @@ private:
 
         tasks_.erase(tasks_.begin() + index);
         saveAndRefresh();
+    }
+
+    void restoreBackup() {
+        const QString mainFile = displayPath(dataFile_);
+        const QString backupFile = mainFile + ".bak";
+        if (!QFile::exists(backupFile)) {
+            QMessageBox::information(this, "没有备份", "当前还没有可用的 tasks.txt.bak 备份。");
+            return;
+        }
+        const auto answer = QMessageBox::question(
+            this,
+            "从备份恢复",
+            QString("将用备份覆盖当前任务数据：\n%1\n\n是否继续？").arg(backupFile),
+            QMessageBox::Yes | QMessageBox::No,
+            QMessageBox::No);
+        if (answer != QMessageBox::Yes) {
+            return;
+        }
+
+        QFile backup(backupFile);
+        if (!backup.open(QIODevice::ReadOnly)) {
+            QMessageBox::critical(this, "恢复失败", backup.errorString());
+            return;
+        }
+        const QByteArray data = backup.readAll();
+
+        QSaveFile output(mainFile);
+        if (!output.open(QIODevice::WriteOnly) || output.write(data) != data.size() || !output.commit()) {
+            QMessageBox::critical(this, "恢复失败", output.errorString());
+            return;
+        }
+
+        const LoadResult loaded = loadTasksChecked(dataFile_);
+        tasks_ = loaded.tasks;
+        dataLoadFailed_ = !loaded.ok || !loaded.warnings.empty();
+        refreshTasks();
+        QMessageBox::information(this, "恢复完成", "已从备份恢复任务数据。");
     }
 
     void exportTasks() {
