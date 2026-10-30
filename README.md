@@ -74,8 +74,10 @@ windeployqt --release --no-translations dist\task_notebook_gui.exe
 ```text
 .
 ├── gui/main.cpp                   # Qt 桌面界面与在线账号查询
+├── src/app_paths.*                # 数据目录、迁移与备份恢复
 ├── src/task_store.*               # 任务数据读取、转义、备份与原子保存
 ├── tests/test_task_store.cpp      # 存储层测试（Qt Test）
+├── tests/test_app_paths.cpp       # 数据目录/迁移测试（Qt Test）
 ├── docs/ROADMAP.md                # 项目评估与后续发展规划
 ├── CHANGELOG.md                   # 版本变化记录
 ├── CMakeLists.txt                 # 构建配置
