@@ -759,7 +759,23 @@ private:
         return request;
     }
 
+    bool readHttpError(QNetworkReply* reply, QString& error) const {
+        const int statusCode = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+        if (statusCode == 429) {
+            error = "请求过于频繁，请稍后重试。";
+            return true;
+        }
+        if (statusCode == 404) {
+            error = "账号不存在或资料不可见。";
+            return true;
+        }
+        return false;
+    }
+
     bool readCodeforcesResult(QNetworkReply* reply, QJsonArray& result, QString& error) const {
+        if (readHttpError(reply, error)) {
+            return false;
+        }
         if (reply->error() != QNetworkReply::NoError) {
             error = reply->errorString();
             return false;
@@ -783,6 +799,9 @@ private:
     }
 
     bool readJsonObject(QNetworkReply* reply, QJsonObject& result, QString& error) const {
+        if (readHttpError(reply, error)) {
+            return false;
+        }
         if (reply->error() != QNetworkReply::NoError) {
             error = reply->errorString();
             return false;
