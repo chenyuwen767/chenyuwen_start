@@ -769,6 +769,14 @@ private:
             error = "账号不存在或资料不可见。";
             return true;
         }
+        if (statusCode == 400) {
+            error = "请求参数有误，请检查账号名。";
+            return true;
+        }
+        if (statusCode >= 500) {
+            error = "平台暂时不可用，请稍后重试。";
+            return true;
+        }
         return false;
     }
 
