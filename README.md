@@ -4,6 +4,8 @@
 
 ![算法练习任务本界面](docs/screenshot.png)
 
+[下载 Windows 便携版](https://github.com/chenyuwen767/algo-practice-notebook/releases/latest)
+
 ## 本项目能做什么？
 
 - 在桌面界面中新增、编辑、删除练习题，并标记完成或待完成。
