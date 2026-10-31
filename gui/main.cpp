@@ -27,6 +27,7 @@
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
 #include <QNetworkRequest>
+#include <QPlainTextEdit>
 #include <QPixmap>
 #include <QPushButton>
 #include <QSaveFile>
@@ -40,6 +41,7 @@
 #include <QTimer>
 #include <QUrl>
 #include <QUrlQuery>
+#include <QUuid>
 #include <QVBoxLayout>
 #include <QWidget>
 
@@ -49,6 +51,7 @@
 #include <vector>
 
 #include "app_paths.h"
+#include "json_task_store.h"
 #include "task_export.h"
 #include "task_history.h"
 #include "task_store.h"
@@ -56,7 +59,7 @@
 #if __has_include("version.h")
 #include "version.h"
 #else
-#define APP_VERSION "0.3.1"
+#define APP_VERSION "0.4.0"
 #endif
 
 namespace {
@@ -67,6 +70,42 @@ QString taskText(const std::string& value) {
 
 std::string toTaskText(const QString& value) {
     return value.toUtf8().toStdString();
+}
+
+QString tagsText(const std::vector<std::string>& tags) {
+    QStringList values;
+    for (const std::string& tag : tags) {
+        values << taskText(tag);
+    }
+    return values.join(", ");
+}
+
+std::vector<std::string> toTaskTags(const QString& text) {
+    QString normalized = text;
+    normalized.replace("，", ",");
+    normalized.replace("；", ";");
+    normalized.replace(";", ",");
+
+    std::vector<std::string> tags;
+    for (const QString& part : normalized.split(',', Qt::SkipEmptyParts)) {
+        const QString tag = part.trimmed();
+        if (!tag.isEmpty()) {
+            tags.push_back(toTaskText(tag));
+        }
+    }
+    return tags;
+}
+
+std::string newTaskId() {
+    return QUuid::createUuid().toString(QUuid::WithoutBraces).toStdString();
+}
+
+void ensureTaskIds(std::vector<Task>& tasks) {
+    for (Task& task : tasks) {
+        if (task.id.empty()) {
+            task.id = newTaskId();
+        }
+    }
 }
 
 QString displayPath(const std::filesystem::path& path) {
@@ -81,18 +120,28 @@ bool promptTaskFields(QWidget* parent,
                       const QString& dialogTitle,
                       QString& title,
                       QString& category,
-                      QString& difficulty) {
+                      QString& difficulty,
+                      QString& tags,
+                      QString& notes) {
     QDialog dialog(parent);
     dialog.setWindowTitle(dialogTitle);
+    dialog.resize(480, 340);
 
     auto* layout = new QVBoxLayout(&dialog);
     auto* form = new QFormLayout;
     auto* titleEdit = new QLineEdit(title, &dialog);
     auto* categoryEdit = new QLineEdit(category, &dialog);
     auto* difficultyEdit = new QLineEdit(difficulty, &dialog);
+    auto* tagsEdit = new QLineEdit(tags, &dialog);
+    auto* notesEdit = new QPlainTextEdit(notes, &dialog);
+    tagsEdit->setPlaceholderText("多个标签用逗号分隔，例如：trie, xor");
+    notesEdit->setPlaceholderText("可记录思路、易错点、重做提醒等");
+    notesEdit->setFixedHeight(90);
     form->addRow("题目名称：", titleEdit);
     form->addRow("分类：", categoryEdit);
     form->addRow("难度：", difficultyEdit);
+    form->addRow("标签：", tagsEdit);
+    form->addRow("备注：", notesEdit);
     layout->addLayout(form);
 
     auto* buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dialog);
@@ -107,6 +156,8 @@ bool promptTaskFields(QWidget* parent,
         title = titleEdit->text().trimmed();
         category = categoryEdit->text().trimmed();
         difficulty = difficultyEdit->text().trimmed();
+        tags = tagsEdit->text().trimmed();
+        notes = notesEdit->toPlainText().trimmed();
         if (!title.isEmpty() && !category.isEmpty() && !difficulty.isEmpty()) {
             return true;
         }
@@ -135,9 +186,47 @@ public:
         : dataFile_(dataInfo.path),
           dataWarning_(dataInfo.warning),
           network_(new QNetworkAccessManager(this)) {
-        const LoadResult loaded = loadTasksChecked(dataFile_);
+        const JsonLoadResult loaded = loadTasksJson(dataFile_);
         tasks_ = loaded.tasks;
+        ensureTaskIds(tasks_);
         dataLoadFailed_ = !loaded.ok || !loaded.warnings.empty();
+
+        QString loadError = QString::fromStdString(loaded.error);
+        QStringList loadWarnings;
+        for (const std::string& warning : loaded.warnings) {
+            loadWarnings << QString::fromStdString(warning);
+        }
+
+        if (loaded.ok && !dataInfo.legacyPath.empty()) {
+            const LoadResult legacy = loadTasksChecked(dataInfo.legacyPath);
+            if (!legacy.ok) {
+                dataLoadFailed_ = true;
+                loadError = QString("旧数据迁移失败：%1\n\n%2")
+                                .arg(QString::fromStdString(legacy.error),
+                                     displayPath(dataInfo.legacyPath));
+            } else {
+                tasks_ = legacy.tasks;
+                ensureTaskIds(tasks_);
+                for (const std::string& warning : legacy.warnings) {
+                    loadWarnings << QString::fromStdString(warning);
+                }
+                if (!legacy.warnings.empty()) {
+                    dataLoadFailed_ = true;
+                }
+
+                std::string saveError;
+                if (!saveTasksJson(tasks_, dataFile_, saveError)) {
+                    dataLoadFailed_ = true;
+                    loadError = QString("无法写入迁移后的 tasks.json：%1")
+                                    .arg(QString::fromStdString(saveError));
+                } else {
+                    const QString notice =
+                        QString("已从旧文件迁移到 tasks.json：\n%1\n\n旧文件保留未删除。")
+                            .arg(displayPath(dataInfo.legacyPath));
+                    dataWarning_ = dataWarning_.isEmpty() ? notice : dataWarning_ + "\n\n" + notice;
+                }
+            }
+        }
 
         setWindowTitle("算法练习任务本");
         resize(960, 680);
@@ -307,24 +396,20 @@ public:
         pendingOnly_->setChecked(settings_.value("tasks/pendingOnly", false).toBool());
         refreshTasks();
 
-        if (!loaded.ok) {
-            QTimer::singleShot(0, this, [this, message = QString::fromStdString(loaded.error)] {
+        if (!loadError.isEmpty()) {
+            QTimer::singleShot(0, this, [this, loadError] {
                 QMessageBox::critical(
                     this,
                     "数据读取失败",
                     QString("无法读取任务数据：%1\n\n路径：%2\n\n为避免覆盖现有数据，继续保存前会再次确认。")
-                        .arg(message, displayPath(dataFile_)));
+                        .arg(loadError, displayPath(dataFile_)));
             });
-        } else if (!loaded.warnings.empty()) {
-            QStringList warnings;
-            for (const std::string& warning : loaded.warnings) {
-                warnings << QString::fromStdString(warning);
-            }
-            QTimer::singleShot(0, this, [this, text = warnings.join('\n')] {
+        } else if (!loadWarnings.isEmpty()) {
+            QTimer::singleShot(0, this, [this, text = loadWarnings.join('\n')] {
                 QMessageBox::warning(
                     this,
                     "部分数据未读取",
-                    text + "\n\n继续修改并保存会以当前列表为准，被跳过的行无法恢复。");
+                    text + "\n\n继续修改并保存会以当前列表为准，被跳过的条目无法恢复。");
             });
         }
 
@@ -332,7 +417,7 @@ public:
             QTimer::singleShot(0, this, [this] {
                 QMessageBox::warning(
                     this,
-                    "数据目录不可写",
+                    "数据位置提示",
                     dataWarning_ + "\n\n当前数据文件：\n" + displayPath(dataFile_));
             });
         }
@@ -406,14 +491,14 @@ private:
         auto* searchLabel = new QLabel("搜索", searchCard);
         taskSearch_ = new QLineEdit(searchCard);
         taskSearch_->setClearButtonEnabled(true);
-        taskSearch_->setPlaceholderText("题目名称、分类或难度");
+        taskSearch_->setPlaceholderText("题目名称、分类、难度、标签或备注");
         searchLayout->addWidget(searchLabel);
         searchLayout->addWidget(taskSearch_);
         layout->addWidget(searchCard);
 
         taskTable_ = new QTableWidget(page);
-        taskTable_->setColumnCount(4);
-        taskTable_->setHorizontalHeaderLabels({"题目名称", "分类", "难度", "状态"});
+        taskTable_->setColumnCount(5);
+        taskTable_->setHorizontalHeaderLabels({"题目名称", "分类", "难度", "标签", "状态"});
         taskTable_->setSelectionBehavior(QAbstractItemView::SelectRows);
         taskTable_->setEditTriggers(QAbstractItemView::NoEditTriggers);
         taskTable_->setAlternatingRowColors(true);
@@ -571,7 +656,9 @@ private:
             }
             if (!keyword.isEmpty()) {
                 const QString haystack =
-                    taskText(task.title) + ' ' + taskText(task.category) + ' ' + taskText(task.difficulty);
+                    taskText(task.title) + ' ' + taskText(task.category) + ' ' +
+                    taskText(task.difficulty) + ' ' + tagsText(task.tags) + ' ' +
+                    taskText(task.notes);
                 if (!haystack.contains(keyword, Qt::CaseInsensitive)) {
                     continue;
                 }
@@ -585,7 +672,8 @@ private:
             taskTable_->setItem(row, 0, title);
             taskTable_->setItem(row, 1, new QTableWidgetItem(taskText(task.category)));
             taskTable_->setItem(row, 2, new QTableWidgetItem(taskText(task.difficulty)));
-            taskTable_->setItem(row, 3, new QTableWidgetItem(task.completed ? "已完成" : "待完成"));
+            taskTable_->setItem(row, 3, new QTableWidgetItem(tagsText(task.tags)));
+            taskTable_->setItem(row, 4, new QTableWidgetItem(task.completed ? "已完成" : "待完成"));
         }
 
         QString summary = QString("共 %1 道题，已完成 %2 道（%3%）")
@@ -604,7 +692,9 @@ private:
         QString title;
         QString category;
         QString difficulty;
-        if (!promptTaskFields(this, "新增题目", title, category, difficulty)) {
+        QString tags;
+        QString notes;
+        if (!promptTaskFields(this, "新增题目", title, category, difficulty, tags, notes)) {
             return;
         }
         if (taskTitleExists(title)) {
@@ -620,7 +710,14 @@ private:
         }
 
         rememberState();
-        tasks_.push_back({toTaskText(title), toTaskText(category), toTaskText(difficulty), false});
+        Task task;
+        task.title = toTaskText(title);
+        task.category = toTaskText(category);
+        task.difficulty = toTaskText(difficulty);
+        task.tags = toTaskTags(tags);
+        task.notes = toTaskText(notes);
+        task.id = newTaskId();
+        tasks_.push_back(task);
         saveAndRefresh();
     }
 
@@ -678,7 +775,9 @@ private:
         QString title = taskText(task.title);
         QString category = taskText(task.category);
         QString difficulty = taskText(task.difficulty);
-        if (!promptTaskFields(this, "编辑题目", title, category, difficulty)) {
+        QString tags = tagsText(task.tags);
+        QString notes = taskText(task.notes);
+        if (!promptTaskFields(this, "编辑题目", title, category, difficulty, tags, notes)) {
             return;
         }
         if (taskTitleExists(title, index)) {
@@ -697,6 +796,11 @@ private:
         tasks_[static_cast<std::size_t>(index)].title = toTaskText(title);
         tasks_[static_cast<std::size_t>(index)].category = toTaskText(category);
         tasks_[static_cast<std::size_t>(index)].difficulty = toTaskText(difficulty);
+        tasks_[static_cast<std::size_t>(index)].tags = toTaskTags(tags);
+        tasks_[static_cast<std::size_t>(index)].notes = toTaskText(notes);
+        if (tasks_[static_cast<std::size_t>(index)].id.empty()) {
+            tasks_[static_cast<std::size_t>(index)].id = newTaskId();
+        }
         saveAndRefresh();
     }
 
@@ -749,7 +853,7 @@ private:
         const QString mainFile = displayPath(dataFile_);
         const QString backupFile = mainFile + ".bak";
         if (!QFile::exists(backupFile)) {
-            QMessageBox::information(this, "没有备份", "当前还没有可用的 tasks.txt.bak 备份。");
+            QMessageBox::information(this, "没有备份", "当前还没有可用的 tasks.json.bak 备份。");
             return;
         }
         const auto answer = QMessageBox::question(
@@ -776,8 +880,9 @@ private:
             return;
         }
 
-        const LoadResult loaded = loadTasksChecked(dataFile_);
+        const JsonLoadResult loaded = loadTasksJson(dataFile_);
         tasks_ = loaded.tasks;
+        ensureTaskIds(tasks_);
         dataLoadFailed_ = !loaded.ok || !loaded.warnings.empty();
         refreshTasks();
         QMessageBox::information(this, "恢复完成", "已从备份恢复任务数据。");
@@ -805,6 +910,7 @@ private:
             QMessageBox::critical(this, "导入失败", QString::fromStdString(error));
             return;
         }
+        ensureTaskIds(imported);
         if (imported.empty()) {
             QMessageBox::information(this, "没有任务", "CSV 中没有可导入的任务。");
             return;
@@ -878,7 +984,7 @@ private:
         }
 
         std::string error;
-        if (!saveTasksChecked(tasks_, dataFile_, error)) {
+        if (!saveTasksJson(tasks_, dataFile_, error)) {
             QMessageBox::critical(
                 this,
                 "保存失败",

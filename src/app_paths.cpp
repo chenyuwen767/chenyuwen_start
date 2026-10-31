@@ -3,12 +3,13 @@
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
+#include <QStringList>
 #include <QUuid>
 
 namespace {
 
-QString taskFileIn(const QString& directory) {
-    return QDir(directory).filePath("tasks.txt");
+QString jsonFileIn(const QString& directory) {
+    return QDir(directory).filePath("tasks.json");
 }
 
 void copyIfPresent(const QString& source, const QString& target) {
@@ -33,6 +34,29 @@ bool isWritableDirectory(const QString& directory) {
     file.close();
     QFile::remove(probe);
     return true;
+}
+
+QString firstExistingFile(const QStringList& directories, const QString& fileName) {
+    for (const QString& directory : directories) {
+        if (directory.isEmpty()) {
+            continue;
+        }
+        const QString candidate = QDir(directory).filePath(fileName);
+        if (QFileInfo::exists(candidate)) {
+            return candidate;
+        }
+    }
+    return {};
+}
+
+QStringList uniqueDirectories(const QStringList& directories) {
+    QStringList unique;
+    for (const QString& directory : directories) {
+        if (!directory.isEmpty() && !unique.contains(directory)) {
+            unique << directory;
+        }
+    }
+    return unique;
 }
 
 } // namespace
@@ -64,15 +88,21 @@ app_paths::DataFileInfo app_paths::resolveDataFileInfo(const QStringList& argume
         }
     }
 
-    const QString target = taskFileIn(dataDirectory);
+    const QString target = jsonFileIn(dataDirectory);
     if (!QFileInfo::exists(target)) {
         const QString backup = target + ".bak";
         if (QFileInfo::exists(backup)) {
             copyIfPresent(backup, target);
-        } else if (!portable) {
-            copyIfPresent(taskFileIn(applicationDirectory), target);
-            if (!QFileInfo::exists(target)) {
-                copyIfPresent(taskFileIn(currentDirectory), target);
+        } else {
+            QStringList legacyDirectories;
+            legacyDirectories << dataDirectory << applicationDirectory << currentDirectory;
+            if (!portable) {
+                legacyDirectories << applicationDataDirectory;
+            }
+            const QString legacy =
+                firstExistingFile(uniqueDirectories(legacyDirectories), "tasks.txt");
+            if (!legacy.isEmpty()) {
+                info.legacyPath = std::filesystem::path(legacy.toStdWString());
             }
         }
     }

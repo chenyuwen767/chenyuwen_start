@@ -9,6 +9,9 @@ struct Task {
     std::string category;
     std::string difficulty;
     bool completed = false;
+    std::vector<std::string> tags = {};
+    std::string notes = {};
+    std::string id = {};
 };
 
 struct LoadResult {

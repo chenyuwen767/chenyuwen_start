@@ -12,6 +12,9 @@ dist/
 tasks.txt
 tasks.txt.bak
 tasks.txt.tmp
+tasks.json
+tasks.json.bak
+tasks.json.tmp
 
 # Editor settings
 .vscode/

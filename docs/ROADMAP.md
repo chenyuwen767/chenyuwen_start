@@ -11,7 +11,7 @@
 
 | 条目 | 状态 | 说明 |
 |---|---|---|
-| 数据目录固定、旧数据迁移、`.bak` 恢复 | 已完成 | 抽出 `app_paths` 模块，7 项单元测试覆盖 |
+| 数据目录固定、旧数据迁移、`.bak` 恢复 | 已完成 | 抽出 `app_paths` 模块，9 项测试覆盖 |
 | 原子保存、版本头、字段转义 | 已完成 | 旧格式、UTF-8 BOM、Unicode 路径兼容 |
 | 任务编辑、删除、标记待完成 | 已完成 | 删除有确认框，双击可编辑 |
 | 任务搜索与快捷键 | 已完成 | 题目/分类/难度搜索，`Ctrl+N` / `Ctrl+F` / `Delete` / `Ctrl+Z` |
@@ -19,13 +19,14 @@
 | 网络超时、防重复查询、洛谷空值 | 已完成 | 15 秒超时；`null` 显示“未公开” |
 | 单实例锁与启动冒烟测试 | 已完成 | `--smoke-test` 已接入 CI |
 | CSV 导入/导出与备份恢复 | 已完成 | UTF-8 BOM；菜单支持导入、导出和“从备份恢复…” |
-| 存储与路径测试 | 已完成 | 13 + 10 + 10 + 6 项 Qt Test，本地全部通过 |
+| 存储与路径测试 | 已完成 | 11 + 9 + 10 + 4 + 5 个测试函数（5 个 QtTest 套件），本地全部通过 |
 | 数据目录/锁权限降级 | 已完成 | AppData 不可写时改用程序目录；锁权限失败时改用临时锁 |
 | 撤销最近一步 | 已完成 | `TaskHistory` 快照栈，菜单与 `Ctrl+Z` 均可触发 |
+| JSON v2 + 标签/备注 | 已完成 | `tasks.json`；旧 `tasks.txt` 自动迁移；表格新增标签列 |
 | Windows CI | 已配置、未实跑 | workflow 已提交，等待 GitHub 首次运行 |
 | 许可证与发布文档 | 已完成 | MIT LICENSE、隐私说明、已知限制、CHANGELOG |
 | 便携版打包 | 已验证 | `scripts/package.ps1` 补齐 MinGW/ICU 依赖；在无 Qt PATH 下启动通过，仍需干净虚拟机验收 |
-| JSON v2、搜索排序联动 | 待办 | 见下文 M2 |
+| Model/View 重构、标签筛选联动 | 待办 | 见下文 M2 |
 
 ---
 
@@ -336,7 +337,7 @@ connect(codeforcesHandleInput_, &QLineEdit::returnPressed, this, [this] { loadCo
 验收：
 
 - 保存过程中强制结束进程，重新打开后数据完整或回退到上一份备份。
-- 旧 `tasks.txt` 首次启动自动迁移，原文件保留为 `.bak`，任务数量一致。
+- 旧 `tasks.txt` 首次启动自动迁移为 `tasks.json`，原文件保留，任务数量一致。
 - 标题含 Tab/换行时不再破坏其他记录（JSON 转义）。
 - 断网查询 15 秒内给出错误提示，按钮恢复可用。
 - 查询中连续按回车只产生一条请求。
@@ -512,7 +513,7 @@ tests/
 
 1. 启动时检测 `tasks.json`；不存在则查找旧 `tasks.txt`（AppData、exe 目录、当前目录）。
 2. 逐行解析 TSV；字段数不足/标题为空的行记录到迁移报告，不静默丢弃。
-3. 写入 `tasks.json`，成功后把旧文件重命名为 `tasks.txt.bak`。
+3. 写入 `tasks.json`，旧文件保留不删除（当前实现）。
 4. 迁移失败时不删除旧文件，提示用户并提供“打开数据目录”。
 5. 用真实旧数据（当前 `P17633 / 无 / 普及- / 1`）做回归用例。
 
@@ -576,7 +577,7 @@ signals:
 
 ```cmake
 cmake_minimum_required(VERSION 3.21)
-project(algorithm_practice_notebook VERSION 0.3.1 LANGUAGES CXX)
+project(algorithm_practice_notebook VERSION 0.4.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -637,7 +638,7 @@ install(TARGETS task_notebook_gui RUNTIME DESTINATION .)
 | P0-3 | 删除/编辑/撤销完成/重复检测 | 功能 | P0 | M | 无 |
 | P0-4 | JSON v2 + 迁移报告 | 数据 | P0 | M | P0-1/2 |
 | P0-5 | 存储层单元测试 + CTest | 质量 | P0 | M | P0-4 |
-| P0-6 | 推送本地提交 + LICENSE + tag v0.3.1 | 治理 | P0 | S | 无 |
+| P0-6 | 推送本地提交 + LICENSE + tag v0.4.0 | 治理 | P0 | S | 无 |
 | P1-1 | 网络超时/重试/统一限流/取消 | 稳定性 | P1 | M | 无 |
 | P1-2 | 查询防重入（回车/按钮） | 稳定性 | P1 | S | 无 |
 | P1-3 | 洛谷 null 显示修复 | 正确性 | P1 | S | 无 |

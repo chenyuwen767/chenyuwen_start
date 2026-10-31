@@ -7,12 +7,12 @@
 ## 本项目能做什么？
 
 - 在桌面界面中新增、编辑、删除练习题，并标记完成或待完成。
-- 按题目名称、分类或难度搜索；支持 `Ctrl+N` 新增、`Ctrl+F` 搜索、`Delete` 删除、`Ctrl+Z` 撤销最近一步。
-- 支持把任务导出为 CSV，也可从 CSV 导入（追加或替换），便于在 Excel 中查看或存档。
+- 支持标签和备注，可按标签/备注搜索；支持 `Ctrl+N` 新增、`Ctrl+F` 搜索、`Delete` 删除、`Ctrl+Z` 撤销最近一步。
+- 支持把任务导出为 CSV（含标签/备注），也可从旧版 4 列 CSV 或新版 6 列 CSV 导入。
 - “文件 → 从备份恢复…”可用 `.bak` 恢复上一版任务数据。
 - 筛选待完成题目，并查看完成数量。
-- 自动保存到用户数据目录，保存时保留上一版 `.bak` 备份；旧版 `tasks.txt` 会自动迁移。
-- 题目名称、分类或难度里包含 Tab、换行等字符时也能正确保存。
+- 使用 JSON v2 保存到用户数据目录，保存时保留上一版 `.bak` 备份；旧版 `tasks.txt` 会自动迁移。
+- 题目名称、分类、难度、标签或备注里包含 Tab、换行等字符时也能正确保存。
 - 输入 Codeforces handle 后查看等级、当前/最高 rating、最近提交和最近 1000 次提交里的不同 AC 题数。
 - 输入洛谷用户名或 UID 后查看公开资料、通过题数、提交题数、等级分与关注统计。
 - 使用统一的卡片、标签页、按钮与表格样式，便于切换和阅读信息。
@@ -45,13 +45,13 @@ ctest --test-dir build --output-on-failure
 默认保存在当前用户的应用数据目录：
 
 ```text
-%APPDATA%\chenyuwen\AlgorithmPracticeNotebook\tasks.txt
+%APPDATA%\chenyuwen\AlgorithmPracticeNotebook\tasks.json
 ```
 
-- 首次启动时，如果该文件不存在，程序会尝试从 exe 同目录或当前目录的旧 `tasks.txt` 迁移。
+- 首次启动时，如果 `tasks.json` 不存在，程序会自动把旧 `tasks.txt` 迁移为 JSON，旧文件保留不删除。
 - 如果 AppData 不可写，程序会自动降级到程序所在目录或临时目录，并提示实际数据位置。
-- 如果主文件缺失但 `tasks.txt.bak` 存在，会先尝试从备份恢复。
-- 每次保存会先把上一版保留为 `tasks.txt.bak`，再原子替换 `tasks.txt`。
+- 如果主文件缺失但 `tasks.json.bak` 存在，会先尝试从备份恢复。
+- 每次保存会先把上一版保留为 `tasks.json.bak`，再原子替换 `tasks.json`。
 - 使用 `task_notebook_gui.exe --portable` 可以把数据放在 exe 同目录，便于 U 盘或绿色版使用。
 
 ## 在线账号查询
@@ -113,11 +113,13 @@ windeployqt --release --no-translations --compiler-runtime dist\task_notebook_gu
 .
 ├── gui/main.cpp                   # Qt 桌面界面与在线账号查询
 ├── src/app_paths.*                # 数据目录、迁移与备份恢复
+├── src/json_task_store.*          # JSON v2 任务存储与备份
 ├── src/task_export.*              # CSV 导出/导入
 ├── src/task_history.*             # 撤销快照栈
-├── src/task_store.*               # 任务数据读取、转义、备份与原子保存
+├── src/task_store.*               # 旧版 TSV 读取/迁移
 ├── src/version.h.in               # CMake 生成的版本头模板
-├── tests/test_task_store.cpp      # 存储层测试（Qt Test）
+├── tests/test_task_store.cpp      # 旧版 TSV 存储测试（Qt Test）
+├── tests/test_json_task_store.cpp # JSON v2 存储测试（Qt Test）
 ├── tests/test_app_paths.cpp       # 数据目录/迁移测试（Qt Test）
 ├── tests/test_task_export.cpp     # CSV 导出/导入测试（Qt Test）
 ├── tests/test_task_history.cpp    # 撤销栈测试（Qt Test）

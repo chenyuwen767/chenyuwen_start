@@ -89,17 +89,63 @@ bool parseCompleted(const std::string& value, bool& completed) {
     return false;
 }
 
+bool isLegacyHeader(const std::vector<std::string>& row) {
+    return row.size() >= 4 && row[0] == "题目" && row[1] == "分类" &&
+           row[2] == "难度" && row[3] == "状态";
+}
+
+bool isExtendedHeader(const std::vector<std::string>& row) {
+    return row.size() >= 6 && row[0] == "题目" && row[1] == "分类" &&
+           row[2] == "难度" && row[3] == "标签" && row[4] == "备注" &&
+           row[5] == "状态";
+}
+
+std::vector<std::string> splitTags(const std::string& value) {
+    std::vector<std::string> tags;
+    std::size_t start = 0;
+    while (start <= value.size()) {
+        const std::size_t end = value.find(';', start);
+        std::string tag = end == std::string::npos ? value.substr(start)
+                                                   : value.substr(start, end - start);
+        const std::size_t first = tag.find_first_not_of(" \t");
+        const std::size_t last = tag.find_last_not_of(" \t");
+        if (first != std::string::npos) {
+            tags.push_back(tag.substr(first, last - first + 1));
+        }
+        if (end == std::string::npos) {
+            break;
+        }
+        start = end + 1;
+    }
+    return tags;
+}
+
+std::string joinTags(const std::vector<std::string>& tags) {
+    std::string joined;
+    for (const std::string& tag : tags) {
+        if (!joined.empty()) {
+            joined += ';';
+        }
+        joined += tag;
+    }
+    return joined;
+}
+
 } // namespace
 
 std::string tasksToCsv(const std::vector<Task>& tasks) {
     // UTF-8 BOM so Excel opens Chinese text without manual encoding selection.
-    std::string csv = "\xEF\xBB\xBF题目,分类,难度,状态\n";
+    std::string csv = "\xEF\xBB\xBF题目,分类,难度,标签,备注,状态\n";
     for (const Task& task : tasks) {
         csv += escapeCsv(task.title);
         csv += ',';
         csv += escapeCsv(task.category);
         csv += ',';
         csv += escapeCsv(task.difficulty);
+        csv += ',';
+        csv += escapeCsv(joinTags(task.tags));
+        csv += ',';
+        csv += escapeCsv(task.notes);
         csv += ',';
         csv += task.completed ? "已完成" : "待完成";
         csv += '\n';
@@ -122,10 +168,17 @@ bool tasksFromCsv(const std::string& csv, std::vector<Task>& tasks, std::string&
         return false;
     }
 
-    const std::vector<std::string>& header = rows.front();
-    const bool hasHeader = header.size() >= 4 && header[0] == "题目" && header[1] == "分类" &&
-                           header[2] == "难度" && header[3] == "状态";
-    const std::size_t firstDataRow = hasHeader ? 1 : 0;
+    bool extended = false;
+    std::size_t firstDataRow = 0;
+    const std::vector<std::string>& firstRow = rows.front();
+    if (isExtendedHeader(firstRow)) {
+        extended = true;
+        firstDataRow = 1;
+    } else if (isLegacyHeader(firstRow)) {
+        firstDataRow = 1;
+    } else if (firstRow.size() >= 6) {
+        extended = true;
+    }
 
     std::vector<Task> parsed;
     for (std::size_t index = firstDataRow; index < rows.size(); ++index) {
@@ -133,17 +186,29 @@ bool tasksFromCsv(const std::string& csv, std::vector<Task>& tasks, std::string&
         if (row.size() == 1 && row[0].empty()) {
             continue;
         }
-        if (row.size() < 4) {
+
+        const std::size_t required = extended ? 6 : 4;
+        if (row.size() < required) {
             error = "CSV 第 " + std::to_string(index + 1) + " 行字段不足";
             return false;
         }
 
-        bool completed = false;
-        if (!parseCompleted(row[3], completed)) {
+        Task task;
+        task.title = row[0];
+        task.category = row[1];
+        task.difficulty = row[2];
+        if (extended) {
+            task.tags = splitTags(row[3]);
+            task.notes = row[4];
+            if (!parseCompleted(row[5], task.completed)) {
+                error = "CSV 第 " + std::to_string(index + 1) + " 行的状态无法识别";
+                return false;
+            }
+        } else if (!parseCompleted(row[3], task.completed)) {
             error = "CSV 第 " + std::to_string(index + 1) + " 行的状态无法识别";
             return false;
         }
-        parsed.push_back({row[0], row[1], row[2], completed});
+        parsed.push_back(std::move(task));
     }
 
     tasks = std::move(parsed);

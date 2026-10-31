@@ -9,12 +9,13 @@ namespace app_paths {
 
 struct DataFileInfo {
     std::filesystem::path path;
+    std::filesystem::path legacyPath;
     QString warning;
 };
 
-// Resolves the task data file, creates the application data directory when
-// needed, restores a backup if the main file is missing, and migrates a legacy
-// tasks.txt from the application directory or the current directory.
+// Resolves tasks.json, creates the application data directory when needed,
+// restores a backup if the main file is missing, and reports a legacy
+// tasks.txt that should be migrated by the caller.
 // If the preferred directory is not writable, a writable fallback is used and
 // `warning` explains the change.
 DataFileInfo resolveDataFileInfo(const QStringList& arguments,

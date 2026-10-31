@@ -2,12 +2,14 @@
 
 本项目的主要变化记录在这里。版本号遵循语义化版本。
 
-## [Unreleased] - v0.3.1
+## [Unreleased] - v0.4.0
 
 ### Added
 
 - MIT 许可证。
 - 任务编辑、删除、标记为待完成。
+- 标签与备注字段；搜索覆盖标签和备注，表格新增“标签”列。
+- JSON v2 持久化（`tasks.json`），旧版 `tasks.txt` 首次启动自动迁移并保留原文件。
 - 存储层单元测试（Qt Test），覆盖字段转义、备份、损坏行、旧格式、Unicode 路径。
 - Windows GitHub Actions：构建、测试、`windeployqt` 打包并上传 artifact。
 - `--smoke-test` 启动冒烟测试：构造真实窗口后自动退出，已接入 CI。
@@ -25,8 +27,10 @@
 
 ### Changed
 
-- 任务数据默认保存到 `%APPDATA%\chenyuwen\AlgorithmPracticeNotebook\tasks.txt`，不再依赖启动目录。
-- 保存改为临时文件 + 原子替换，并保留上一版 `tasks.txt.bak`。
+- 任务数据默认保存到 `%APPDATA%\chenyuwen\AlgorithmPracticeNotebook\tasks.json`，不再依赖启动目录。
+- 保存改为 JSON v2 + `QSaveFile` 原子替换，并保留上一版 `tasks.json.bak`。
+- 旧版 TSV `tasks.txt` 首次启动迁移为 JSON，原文件保留；旧格式仍可导入。
+- CSV 导出升级为 6 列（题目/分类/难度/标签/备注/状态），导入兼容旧版 4 列。
 - 存储格式增加版本头，字段中的 Tab、换行、反斜杠会被转义；旧格式仍按原样读取。
 - 首次启动会从 exe 同目录或当前目录迁移旧 `tasks.txt`；若主文件缺失但 `.bak` 存在，会先恢复备份。
 - 加载失败或部分行损坏时会提示用户；加载失败时继续保存需要二次确认。

@@ -21,20 +21,21 @@
   ```
 
 - [ ] 0 编译警告（项目开启了 `-Wall -Wextra -Wpedantic` / `/W4`）。
-- [ ] 三个测试套件全部通过：`task_store`、`app_paths`、`task_export`。
+- [ ] 五个测试套件全部通过：`task_store`、`app_paths`、`task_export`、`task_history`、`json_task_store`。
 - [ ] 启动冒烟：`--portable --smoke-test` 能构造窗口并自动退出（CI 使用 `Start-Process -Wait` 检查退出码）。
 
 ## 3. 数据安全验收
 
-- [ ] 用真实旧版 `tasks.txt`（含中文、已完成状态）启动，确认迁移到 `%APPDATA%\chenyuwen\AlgorithmPracticeNotebook\tasks.txt`。
-- [ ] 确认旧文件仍在，目标文件可正常读写。
-- [ ] 连续保存两次，确认 `tasks.txt.bak` 是上一版内容。
+- [ ] 用真实旧版 `tasks.txt`（含中文、已完成状态）启动，确认迁移到 `%APPDATA%\chenyuwen\AlgorithmPracticeNotebook\tasks.json`。
+- [ ] 确认旧 `tasks.txt` 仍在，`tasks.json` 可正常读写。
+- [ ] 连续保存两次，确认 `tasks.json.bak` 是上一版内容。
 - [ ] 手动删除主文件、保留 `.bak`，重启后能从备份恢复。
 - [ ] 保存过程中强制结束进程，重启后数据完整或回退到备份。
 - [ ] 启动第二个实例，确认被单实例锁拦截。
 - [ ] 把 AppData 数据目录设为不可写，确认应用降级到程序目录/临时目录并提示实际路径。
 - [ ] 确认锁文件创建失败时不会误报“另一个实例”，而是给出可读的权限说明。
-- [ ] 标题含 Tab、换行、反斜杠时保存/重开仍正确。
+- [ ] 标题/标签/备注含 Tab、换行、反斜杠时保存/重开仍正确。
+- [ ] 导出 CSV 再导入，标签和备注不丢失；旧版 4 列 CSV 仍可导入。
 
 ## 4. 功能冒烟
 
@@ -79,7 +80,7 @@ Compress-Archive -Path dist\* -DestinationPath task_notebook_gui-windows.zip
 
 - [ ] `git status` 干净，`git log` 无遗漏。
 - [ ] 推送 `main` 到 `origin`。
-- [ ] 打 tag：`git tag -a v0.3.1 -m "v0.3.1"`，推送 tag。
+- [ ] 打 tag：`git tag -a v0.4.0 -m "v0.4.0"`，推送 tag。
 - [ ] GitHub Release 附上：
   - `task_notebook_gui-windows.zip`
   - `CHANGELOG.md` 对应段落
