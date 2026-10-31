@@ -14,6 +14,8 @@ struct Task {
     std::string id = {};
     std::string platform = {};
     std::string problemId = {};
+    std::string createdAt = {};
+    std::string completedAt = {};
 };
 
 struct LoadResult {

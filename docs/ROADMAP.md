@@ -19,13 +19,14 @@
 | 网络超时、防重复查询、洛谷空值 | 已完成 | 15 秒超时；`null` 显示“未公开” |
 | 单实例锁与启动冒烟测试 | 已完成 | `--smoke-test` 已接入 CI |
 | CSV 导入/导出与备份恢复 | 已完成 | UTF-8 BOM；菜单支持导入、导出和“从备份恢复…” |
-| 存储与路径测试 | 已完成 | 11 + 9 + 11 + 4 + 6 + 5 + 5 + 5 个测试函数（8 个 QtTest 套件），本地全部通过 |
+| 存储与路径测试 | 已完成 | 11 + 9 + 11 + 4 + 6 + 5 + 5 + 5 + 5 个测试函数（9 个 QtTest 套件），本地全部通过 |
 | 数据目录/锁权限降级 | 已完成 | AppData 不可写时改用程序目录；锁权限失败时改用临时锁 |
 | 撤销最近一步 | 已完成 | `TaskHistory` 快照栈，菜单与 `Ctrl+Z` 均可触发 |
-| JSON v3 + 平台/题号 | 已完成 | `tasks.json`；兼容 JSON v2 与旧 `tasks.txt`；表格新增“平台/题号”列 |
+| JSON v4 + 平台/题号 | 已完成 | `tasks.json`；兼容 JSON v2/v3 与旧 `tasks.txt`；表格新增“平台/题号”列 |
 | Model/View 重构 + 标签筛选 | 已完成 | `QAbstractTableModel` + `QSortFilterProxyModel`，排序/搜索/待完成筛选统一走代理 |
 | Codeforces 任务联动 | 已完成 | 题号归一化、核验关联任务、导入最近 AC |
 | 洛谷题目关联 | 已完成 | 公开题号查询、关联/新建任务、打开题目页 |
+| 数据洞察 | 已完成 | 完成率、今日/本周/本月、连续打卡、每日目标、分布、8 周趋势 |
 | Windows CI | 已通过 | run 1–3 全部步骤成功，包含构建、测试、冒烟、打包和 artifact 上传 |
 | 许可证与发布文档 | 已完成 | MIT LICENSE、隐私说明、已知限制、CHANGELOG |
 | 便携版打包 | 已验证 | `scripts/package.ps1` 补齐 MinGW/ICU 依赖；在无 Qt PATH 下启动通过，仍需干净虚拟机验收 |
@@ -579,7 +580,7 @@ signals:
 
 ```cmake
 cmake_minimum_required(VERSION 3.21)
-project(algorithm_practice_notebook VERSION 0.4.0 LANGUAGES CXX)
+project(algorithm_practice_notebook VERSION 0.5.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -640,7 +641,7 @@ install(TARGETS task_notebook_gui RUNTIME DESTINATION .)
 | P0-3 | 删除/编辑/撤销完成/重复检测 | 功能 | P0 | M | 无 |
 | P0-4 | JSON v2 + 迁移报告 | 数据 | P0 | M | P0-1/2 |
 | P0-5 | 存储层单元测试 + CTest | 质量 | P0 | M | P0-4 |
-| P0-6 | 推送本地提交 + LICENSE + tag v0.4.0 | 治理 | P0 | S | 无 |
+| P0-6 | 推送本地提交 + LICENSE + tag v0.5.0 | 治理 | P0 | S | 无 |
 | P1-1 | 网络超时/重试/统一限流/取消 | 稳定性 | P1 | M | 无 |
 | P1-2 | 查询防重入（回车/按钮） | 稳定性 | P1 | S | 无 |
 | P1-3 | 洛谷 null 显示修复 | 正确性 | P1 | S | 无 |
@@ -710,12 +711,12 @@ install(TARGETS task_notebook_gui RUNTIME DESTINATION .)
 
 | 指标 | 当前 | v0.3.1 目标 | v1.0 目标 |
 |---|---|---|---|
-| 单元测试数 | 56 | ≥ 15 | ≥ 40 |
+| 单元测试数 | 61 | ≥ 15 | ≥ 40 |
 | 存储/解析分支覆盖 | 0 | ≥ 60% | ≥ 75% |
 | CI | 无 | Windows 构建+测试 | 构建+测试+打包+release |
 | 编译警告 | 0（手工检查） | 0（CI 强制） | 0 |
 | 干净机器可运行 | 否 | portable zip | 安装包 + 卸载 |
-| 数据格式 | TSV 无版本 | JSON v3 + 迁移 | JSON v3 稳定 |
+| 数据格式 | TSV 无版本 | JSON v4 + 迁移 | JSON v4 稳定 |
 | 已知 P0/P1 | 7+ | 0 | 0 |
 
 ### 9.2 产品指标（自用/小范围试用）

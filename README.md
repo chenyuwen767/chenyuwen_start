@@ -3,6 +3,7 @@
 一个为算法学习者准备的 Qt 6 桌面任务本。它帮助你记录正在练习的题目、标记完成状态，并查看公开的 Codeforces 和洛谷账号进度。
 
 ![算法练习任务本界面](docs/screenshot.png)
+![学习统计界面](docs/screenshot-stats.png)
 
 [下载 Windows 便携版](https://github.com/chenyuwen767/algo-practice-notebook/releases/latest)
 
@@ -13,7 +14,8 @@
 - 支持把任务导出为 CSV（含平台/题号/标签/备注），也可从旧版 4 列、6 列或新版 8 列 CSV 导入。
 - “文件 → 从备份恢复…”可用 `.bak` 恢复上一版任务数据。
 - 筛选待完成题目，并查看完成数量。
-- 使用 JSON v3 保存到用户数据目录，保存时保留上一版 `.bak` 备份；旧版 `tasks.txt` 和 JSON v2 会自动兼容。
+- 使用 JSON v4 保存到用户数据目录，保存时保留上一版 `.bak` 备份；旧版 `tasks.txt` 和 JSON v2/v3 会自动兼容。
+- 学习统计页显示完成率、今日/本周/本月完成、连续打卡、每日目标、平台/分类/难度分布和最近 8 周趋势。
 - 题目名称、分类、难度、平台、题号、标签或备注里包含 Tab、换行等字符时也能正确保存。
 - 输入 Codeforces handle 后查看等级、rating、最近提交和最近 1000 次提交里的不同 AC 题数；可核验关联任务，或把最近 AC 导入任务列表。
 - 输入洛谷题号可查询公开题目信息，关联到选中任务或直接新建任务；任务表可一键打开 Codeforces/洛谷题目页。
@@ -76,6 +78,7 @@ Codeforces 官方 API 文档：[方法说明](https://codeforces.com/apiHelp/met
 
 - Codeforces 的通过题数只统计最近 1000 次提交，不能代表完整历史。
 - 洛谷提交明细可能要求登录，本项目不读取受限制的数据。
+- 旧版数据里已完成但没有完成时间的任务，会单独提示，不计入今日/连续打卡统计。
 - Codeforces API 每两秒最多一次请求；连续查询多个账号时可能需要等待。
 
 ## 打包便携版
@@ -116,26 +119,30 @@ windeployqt --release --no-translations --compiler-runtime dist\task_notebook_gu
 .
 ├── gui/main.cpp                   # Qt 桌面界面与在线账号查询
 ├── src/app_paths.*                # 数据目录、迁移与备份恢复
-├── src/codeforces_problem.*      # CF 题号归一化与匹配
-├── src/json_task_store.*         # JSON v3 任务存储与备份
-├── src/luogu_problem.*           # 洛谷题号、页面解析与链接
+├── src/codeforces_problem.*       # CF 题号归一化与匹配
+├── src/json_task_store.*          # JSON v4 任务存储与备份
+├── src/luogu_problem.*            # 洛谷题号、页面解析与链接
+├── src/study_stats.*              # 完成率/连续打卡/分布/周趋势统计
 ├── src/task_export.*              # CSV 导出/导入
 ├── src/task_history.*             # 撤销快照栈
 ├── src/task_store.*               # 旧版 TSV 读取/迁移
 ├── src/task_table_model.*         # 任务表模型与筛选代理
+├── src/weekly_chart.*             # 最近 8 周趋势自绘图表
 ├── src/version.h.in               # CMake 生成的版本头模板
 ├── tests/test_task_store.cpp      # 旧版 TSV 存储测试（Qt Test）
-├── tests/test_json_task_store.cpp # JSON v3 存储测试（Qt Test）
+├── tests/test_json_task_store.cpp # JSON v4 存储测试（Qt Test）
 ├── tests/test_app_paths.cpp       # 数据目录/迁移测试（Qt Test）
 ├── tests/test_task_export.cpp     # CSV 导出/导入测试（Qt Test）
 ├── tests/test_task_history.cpp    # 撤销栈测试（Qt Test）
 ├── tests/test_task_table_model.cpp # 模型/筛选/排序测试（Qt Test）
 ├── tests/test_codeforces_problem.cpp # CF 题号匹配测试（Qt Test）
 ├── tests/test_luogu_problem.cpp   # 洛谷题号/页面解析测试（Qt Test）
+├── tests/test_study_stats.cpp     # 统计/streak/周趋势测试（Qt Test）
 ├── scripts/package.ps1            # 便携版打包脚本
 ├── docs/ROADMAP.md                # 项目评估与后续发展规划
 ├── docs/RELEASE.md                # 发布检查清单
-├── docs/screenshot.png            # 界面截图
+├── docs/screenshot.png            # 任务列表截图
+├── docs/screenshot-stats.png      # 学习统计截图
 ├── CHANGELOG.md                   # 版本变化记录
 ├── CONTRIBUTING.md                # 贡献指南
 ├── LICENSE                        # MIT 许可证

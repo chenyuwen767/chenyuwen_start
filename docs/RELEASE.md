@@ -21,7 +21,7 @@
   ```
 
 - [ ] 0 编译警告（项目开启了 `-Wall -Wextra -Wpedantic` / `/W4`）。
-- [ ] 八个测试套件全部通过：`task_store`、`app_paths`、`task_export`、`task_history`、`json_task_store`、`task_table_model`、`codeforces_problem`、`luogu_problem`。
+- [ ] 九个测试套件全部通过：`task_store`、`app_paths`、`task_export`、`task_history`、`json_task_store`、`task_table_model`、`codeforces_problem`、`luogu_problem`、`study_stats`。
 - [ ] 启动冒烟：`--portable --smoke-test` 能构造窗口并自动退出（CI 使用 `Start-Process -Wait` 检查退出码）。
 
 ## 3. 数据安全验收
@@ -42,6 +42,9 @@
 - [ ] 新增、编辑、删除、标记完成、标记待完成、撤销完成。
 - [ ] 搜索题目/平台/题号/分类/难度/标签/备注；`Ctrl+N`、`Ctrl+F`、`Delete`、`Ctrl+Z` 快捷键。
 - [ ] 按列排序后，编辑/删除作用在正确任务上。
+- [ ] 学习统计的完成率、今日/本周/本月、streak 与明细逐条核对。
+- [ ] 完成/重开/导入 AC 后完成时间戳更新；旧任务无时间时显示“未记录”提示。
+- [ ] 最近 8 周趋势与完成时间分布一致，修改每日目标后进度条和设置保持。
 - [ ] 关闭再打开，窗口位置、筛选状态、上次查询账号保持。
 - [ ] “文件 → 打开数据目录”能打开正确目录。
 - [ ] “帮助 → 关于”显示版本与数据路径。
@@ -84,7 +87,7 @@ Compress-Archive -Path dist\* -DestinationPath task_notebook_gui-windows.zip
 
 - [ ] `git status` 干净，`git log` 无遗漏。
 - [ ] 推送 `main` 到 `origin`。
-- [ ] 打 tag：`git tag -a v0.4.0 -m "v0.4.0"`，推送 tag。
+- [ ] 打 tag：`git tag -a v0.5.0 -m "v0.5.0"`，推送 tag。
 - [ ] GitHub Release 附上：
   - `task_notebook_gui-windows.zip`
   - `CHANGELOG.md` 对应段落

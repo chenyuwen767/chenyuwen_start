@@ -52,6 +52,8 @@ void JsonTaskStoreTest::roundTripPreservesAllFields() {
     first.id = "task-1";
     first.platform = "codeforces";
     first.problemId = "1900A";
+    first.createdAt = "2026-10-30T10:00:00+08:00";
+    first.completedAt = "2026-10-31T11:00:00+08:00";
 
     Task second;
     second.title = "CF 1900A";
@@ -78,6 +80,8 @@ void JsonTaskStoreTest::roundTripPreservesAllFields() {
     QCOMPARE(textOf(loaded.tasks[0].id), QString("task-1"));
     QCOMPARE(textOf(loaded.tasks[0].platform), QString("codeforces"));
     QCOMPARE(textOf(loaded.tasks[0].problemId), QString("1900A"));
+    QCOMPARE(textOf(loaded.tasks[0].createdAt), QString("2026-10-30T10:00:00+08:00"));
+    QCOMPARE(textOf(loaded.tasks[0].completedAt), QString("2026-10-31T11:00:00+08:00"));
     QCOMPARE(textOf(loaded.tasks[1].id), QString("task-2"));
 }
 
@@ -157,6 +161,8 @@ void JsonTaskStoreTest::loadsVersion2WithoutNewFields() {
     QCOMPARE(textOf(loaded.tasks[0].title), QString("legacy"));
     QVERIFY(loaded.tasks[0].platform.empty());
     QVERIFY(loaded.tasks[0].problemId.empty());
+    QVERIFY(loaded.tasks[0].createdAt.empty());
+    QVERIFY(loaded.tasks[0].completedAt.empty());
 }
 
 int main(int argc, char** argv) {

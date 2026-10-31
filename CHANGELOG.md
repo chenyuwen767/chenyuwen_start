@@ -2,7 +2,7 @@
 
 本项目的主要变化记录在这里。版本号遵循语义化版本。
 
-## [Unreleased] - v0.4.0
+## [Unreleased] - v0.5.0
 
 ### Added
 
@@ -11,7 +11,9 @@
 - 标签与备注字段；搜索覆盖标签和备注，表格新增“标签”列。
 - 平台/题号字段；Codeforces 题号归一化，支持按关联任务核验 AC、导入最近 AC。
 - 洛谷题号查询与公开题目解析：可关联到选中任务、从题目新建任务，并一键打开题目页。
-- JSON v3 持久化（`tasks.json`），兼容 JSON v2 和旧版 `tasks.txt`；旧文件保留。
+- 学习统计页：完成率、今日/本周/本月完成、连续打卡、每日目标、平台/分类/难度分布和最近 8 周自绘趋势图。
+- 任务增加创建/完成时间；完成、重开、导入 AC 时自动记录时间戳。
+- JSON v4 持久化（`tasks.json`），兼容 JSON v2/v3 和旧版 `tasks.txt`；旧文件保留。
 - 任务表改用 `QAbstractTableModel` + `QSortFilterProxyModel`，排序/搜索/待完成筛选由代理统一处理。
 - 存储层单元测试（Qt Test），覆盖字段转义、备份、损坏行、旧格式、Unicode 路径。
 - Windows GitHub Actions：构建、测试、`windeployqt` 打包并上传 artifact。
@@ -31,7 +33,7 @@
 ### Changed
 
 - 任务数据默认保存到 `%APPDATA%\chenyuwen\AlgorithmPracticeNotebook\tasks.json`，不再依赖启动目录。
-- 保存改为 JSON v3 + `QSaveFile` 原子替换，并保留上一版 `tasks.json.bak`。
+- 保存改为 JSON v4 + `QSaveFile` 原子替换，并保留上一版 `tasks.json.bak`。
 - 旧版 TSV `tasks.txt` 首次启动迁移为 JSON，原文件保留；旧格式仍可导入。
 - CSV 导出升级为 8 列（题目/分类/难度/平台/题号/标签/备注/状态），导入兼容 4/6 列旧格式。
 - 存储格式增加版本头，字段中的 Tab、换行、反斜杠会被转义；旧格式仍按原样读取。

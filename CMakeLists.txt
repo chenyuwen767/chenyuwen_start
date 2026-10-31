@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.16)
 
-project(algorithm_practice_notebook VERSION 0.4.0 LANGUAGES CXX)
+project(algorithm_practice_notebook VERSION 0.5.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -18,10 +18,12 @@ add_executable(task_notebook_gui WIN32
     src/codeforces_problem.cpp
     src/json_task_store.cpp
     src/luogu_problem.cpp
+    src/study_stats.cpp
     src/task_export.cpp
     src/task_history.cpp
     src/task_store.cpp
     src/task_table_model.cpp
+    src/weekly_chart.cpp
 )
 target_include_directories(task_notebook_gui PRIVATE src "${CMAKE_BINARY_DIR}/generated")
 target_link_libraries(task_notebook_gui PRIVATE Qt6::Widgets Qt6::Network)
@@ -94,6 +96,13 @@ if (BUILD_TESTING)
     target_include_directories(test_luogu_problem PRIVATE src)
     target_link_libraries(test_luogu_problem PRIVATE Qt6::Test)
 
+    add_executable(test_study_stats
+        tests/test_study_stats.cpp
+        src/study_stats.cpp
+    )
+    target_include_directories(test_study_stats PRIVATE src)
+    target_link_libraries(test_study_stats PRIVATE Qt6::Test)
+
     if (MSVC)
         target_compile_options(test_task_store PRIVATE /W4 /permissive-)
         target_compile_options(test_app_paths PRIVATE /W4 /permissive-)
@@ -103,6 +112,7 @@ if (BUILD_TESTING)
         target_compile_options(test_task_table_model PRIVATE /W4 /permissive-)
         target_compile_options(test_codeforces_problem PRIVATE /W4 /permissive-)
         target_compile_options(test_luogu_problem PRIVATE /W4 /permissive-)
+        target_compile_options(test_study_stats PRIVATE /W4 /permissive-)
     else()
         target_compile_options(test_task_store PRIVATE -Wall -Wextra -Wpedantic)
         target_compile_options(test_app_paths PRIVATE -Wall -Wextra -Wpedantic)
@@ -112,6 +122,7 @@ if (BUILD_TESTING)
         target_compile_options(test_task_table_model PRIVATE -Wall -Wextra -Wpedantic)
         target_compile_options(test_codeforces_problem PRIVATE -Wall -Wextra -Wpedantic)
         target_compile_options(test_luogu_problem PRIVATE -Wall -Wextra -Wpedantic)
+        target_compile_options(test_study_stats PRIVATE -Wall -Wextra -Wpedantic)
     endif()
 
     add_test(NAME task_store COMMAND test_task_store)
@@ -122,4 +133,5 @@ if (BUILD_TESTING)
     add_test(NAME task_table_model COMMAND test_task_table_model)
     add_test(NAME codeforces_problem COMMAND test_codeforces_problem)
     add_test(NAME luogu_problem COMMAND test_luogu_problem)
+    add_test(NAME study_stats COMMAND test_study_stats)
 endif()
