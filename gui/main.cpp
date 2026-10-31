@@ -57,6 +57,7 @@
 #include "app_paths.h"
 #include "codeforces_problem.h"
 #include "json_task_store.h"
+#include "luogu_problem.h"
 #include "task_export.h"
 #include "task_history.h"
 #include "task_store.h"
@@ -480,6 +481,13 @@ private:
     QPushButton* luoguButton_ = nullptr;
     QLabel* luoguSummary_ = nullptr;
     QLabel* luoguDetails_ = nullptr;
+    QLineEdit* luoguProblemInput_ = nullptr;
+    QPushButton* luoguProblemButton_ = nullptr;
+    QLabel* luoguProblemInfo_ = nullptr;
+    QPushButton* luoguLinkSelectedButton_ = nullptr;
+    QPushButton* luoguCreateTaskButton_ = nullptr;
+    LuoguProblem luoguProblem_;
+    bool luoguProblemLoading_ = false;
 
     void addPageHeading(QVBoxLayout* layout, const QString& title, const QString& description) {
         auto* heading = new QLabel(title);
@@ -547,12 +555,14 @@ private:
         auto* buttons = new QHBoxLayout;
         auto* addButton = new QPushButton("新增题目", page);
         auto* editButton = new QPushButton("编辑题目", page);
+        auto* openButton = new QPushButton("打开题目", page);
         auto* completeButton = new QPushButton("标记为完成", page);
         auto* pendingButton = new QPushButton("标记为待完成", page);
         auto* deleteButton = new QPushButton("删除题目", page);
         deleteButton->setObjectName("dangerButton");
         buttons->addWidget(addButton);
         buttons->addWidget(editButton);
+        buttons->addWidget(openButton);
         buttons->addWidget(completeButton);
         buttons->addWidget(pendingButton);
         buttons->addWidget(deleteButton);
@@ -570,6 +580,7 @@ private:
         });
         connect(addButton, &QPushButton::clicked, this, [this] { addTask(); });
         connect(editButton, &QPushButton::clicked, this, [this] { editTask(); });
+        connect(openButton, &QPushButton::clicked, this, [this] { openSelectedProblem(); });
         connect(completeButton, &QPushButton::clicked, this, [this] { completeTask(); });
         connect(pendingButton, &QPushButton::clicked, this, [this] { reopenTask(); });
         connect(deleteButton, &QPushButton::clicked, this, [this] { deleteTask(); });
@@ -679,6 +690,34 @@ private:
         luoguDetails_->setWordWrap(true);
         layout->addWidget(luoguDetails_);
 
+        auto* problemCard = createCard(page);
+        auto* problemLayout = new QVBoxLayout(problemCard);
+        auto* problemTitle = new QLabel("题目关联", problemCard);
+        problemTitle->setStyleSheet("font-weight: 700; color: #314d75;");
+        auto* problemRow = new QHBoxLayout;
+        luoguProblemInput_ = new QLineEdit(problemCard);
+        luoguProblemInput_->setPlaceholderText("输入洛谷题号，例如 P1001");
+        luoguProblemButton_ = new QPushButton("查询题目", problemCard);
+        problemRow->addWidget(luoguProblemInput_);
+        problemRow->addWidget(luoguProblemButton_);
+        luoguProblemInfo_ = new QLabel(
+            "查询公开题目信息后，可关联到当前选中的任务，或直接新建任务。", problemCard);
+        luoguProblemInfo_->setObjectName("hint");
+        luoguProblemInfo_->setWordWrap(true);
+        auto* problemActions = new QHBoxLayout;
+        luoguLinkSelectedButton_ = new QPushButton("关联到选中任务", problemCard);
+        luoguCreateTaskButton_ = new QPushButton("新建任务", problemCard);
+        luoguLinkSelectedButton_->setEnabled(false);
+        luoguCreateTaskButton_->setEnabled(false);
+        problemActions->addWidget(luoguLinkSelectedButton_);
+        problemActions->addWidget(luoguCreateTaskButton_);
+        problemActions->addStretch();
+        problemLayout->addWidget(problemTitle);
+        problemLayout->addLayout(problemRow);
+        problemLayout->addWidget(luoguProblemInfo_);
+        problemLayout->addLayout(problemActions);
+        layout->addWidget(problemCard);
+
         auto* limitationCard = createCard(page);
         auto* limitationLayout = new QVBoxLayout(limitationCard);
         auto* limitationTitle = new QLabel("提交记录说明", limitationCard);
@@ -695,6 +734,18 @@ private:
 
         connect(luoguButton_, &QPushButton::clicked, this, [this] { loadLuoguAccount(); });
         connect(luoguHandleInput_, &QLineEdit::returnPressed, this, [this] { loadLuoguAccount(); });
+        connect(luoguProblemButton_, &QPushButton::clicked, this, [this] { lookupLuoguProblem(); });
+        connect(luoguProblemInput_, &QLineEdit::returnPressed, this,
+                [this] { lookupLuoguProblem(); });
+        connect(luoguProblemInput_, &QLineEdit::textChanged, this, [this] {
+            luoguProblem_ = {};
+            luoguLinkSelectedButton_->setEnabled(false);
+            luoguCreateTaskButton_->setEnabled(false);
+        });
+        connect(luoguLinkSelectedButton_, &QPushButton::clicked, this,
+                [this] { linkLuoguProblemToSelectedTask(); });
+        connect(luoguCreateTaskButton_, &QPushButton::clicked, this,
+                [this] { createTaskFromLuoguProblem(); });
         return page;
     }
 
@@ -1458,6 +1509,172 @@ private:
             luoguLoading_ = false;
             luoguButton_->setEnabled(true);
         });
+    }
+
+    void lookupLuoguProblem() {
+        if (luoguProblemLoading_) {
+            return;
+        }
+
+        const QString pid = normalizeLuoguProblemId(luoguProblemInput_->text());
+        if (pid.isEmpty()) {
+            luoguProblem_ = {};
+            luoguLinkSelectedButton_->setEnabled(false);
+            luoguCreateTaskButton_->setEnabled(false);
+            luoguProblemInfo_->setText("请输入有效的洛谷题号，例如 P1001。");
+            return;
+        }
+
+        luoguProblemLoading_ = true;
+        luoguProblem_ = {};
+        luoguProblemButton_->setEnabled(false);
+        luoguLinkSelectedButton_->setEnabled(false);
+        luoguCreateTaskButton_->setEnabled(false);
+        luoguProblemInfo_->setText("正在查询公开题目信息……");
+
+        auto* reply = network_->get(luoguRequest(luoguProblemUrl(pid)));
+        connect(reply, &QNetworkReply::finished, this, [this, reply] {
+            const int statusCode =
+                reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+            const QByteArray body = reply->readAll();
+            QString error;
+
+            if (statusCode == 404) {
+                error = "题号不存在或题目不可见。";
+            } else if (statusCode != 0 && statusCode != 200) {
+                if (!readHttpError(reply, error)) {
+                    error = QString("洛谷返回 HTTP %1。").arg(statusCode);
+                }
+            } else if (reply->error() != QNetworkReply::NoError) {
+                error = "网络请求失败：" + reply->errorString();
+            }
+            reply->deleteLater();
+
+            luoguProblemLoading_ = false;
+            luoguProblemButton_->setEnabled(true);
+            if (!error.isEmpty()) {
+                luoguProblemInfo_->setText("查询失败：" + error);
+                return;
+            }
+
+            LuoguProblem problem;
+            QString parseError;
+            if (!parseLuoguProblemHtml(QString::fromUtf8(body), problem, parseError)) {
+                luoguProblemInfo_->setText("查询失败：" + parseError);
+                return;
+            }
+
+            luoguProblem_ = problem;
+            luoguProblemInfo_->setText(
+                QString("%1 %2\n难度：%3 · 通过 %4 / 提交 %5")
+                    .arg(problem.pid,
+                         problem.name,
+                         luoguDifficultyLabel(problem.difficulty))
+                    .arg(problem.totalAccepted)
+                    .arg(problem.totalSubmit));
+            luoguLinkSelectedButton_->setEnabled(true);
+            luoguCreateTaskButton_->setEnabled(true);
+        });
+    }
+
+    void linkLuoguProblemToSelectedTask() {
+        if (!luoguProblem_.valid) {
+            QMessageBox::information(this, "还没有题目", "请先查询洛谷题目。");
+            return;
+        }
+        const int index = selectedTaskIndex();
+        if (index < 0) {
+            QMessageBox::information(this, "请选择题目", "请先在任务表格中选择一道题目。");
+            return;
+        }
+
+        rememberState();
+        Task& task = tasks_[static_cast<std::size_t>(index)];
+        task.platform = "luogu";
+        task.problemId = toTaskText(luoguProblem_.pid);
+        const QString taskTitle = taskText(task.title);
+        saveAndRefresh();
+        luoguProblemInfo_->setText(
+            QString("已把 %1 %2 关联到任务“%3”。")
+                .arg(luoguProblem_.pid, luoguProblem_.name, taskTitle));
+    }
+
+    void createTaskFromLuoguProblem() {
+        if (!luoguProblem_.valid) {
+            QMessageBox::information(this, "还没有题目", "请先查询洛谷题目。");
+            return;
+        }
+
+        QString title = luoguProblem_.name.isEmpty() ? luoguProblem_.pid : luoguProblem_.name;
+        QString category = "洛谷";
+        QString difficulty = luoguDifficultyLabel(luoguProblem_.difficulty);
+        QString platform = "luogu";
+        QString problemId = luoguProblem_.pid;
+        QString tags;
+        QString notes;
+        if (!promptTaskFields(this, "从洛谷题目新建任务", title, category, difficulty, platform,
+                              problemId, tags, notes)) {
+            return;
+        }
+        if (taskTitleExists(title)) {
+            const auto answer = QMessageBox::question(
+                this,
+                "题目已存在",
+                QString("“%1”已经在任务列表中，仍要再添加一条吗？").arg(title),
+                QMessageBox::Yes | QMessageBox::No,
+                QMessageBox::No);
+            if (answer != QMessageBox::Yes) {
+                return;
+            }
+        }
+
+        rememberState();
+        Task task;
+        task.title = toTaskText(title);
+        task.category = toTaskText(category);
+        task.difficulty = toTaskText(difficulty);
+        task.platform = toTaskText(platform);
+        task.problemId = toTaskText(problemId);
+        task.tags = toTaskTags(tags);
+        task.notes = toTaskText(notes);
+        task.id = newTaskId();
+        tasks_.push_back(task);
+        saveAndRefresh();
+        QMessageBox::information(this, "已新建任务", QString("已新建：%1").arg(title));
+    }
+
+    void openSelectedProblem() {
+        const int index = selectedTaskIndex();
+        if (index < 0) {
+            QMessageBox::information(this, "请选择题目", "请先在任务表格中选择一道题目。");
+            return;
+        }
+
+        const Task& task = tasks_[static_cast<std::size_t>(index)];
+        const QString platform = taskText(task.platform).toLower();
+        const QString problemId = taskText(task.problemId);
+        QUrl url;
+        if (platform == "codeforces") {
+            url = codeforcesProblemUrl(problemId);
+        } else if (platform == "luogu") {
+            url = luoguProblemUrl(problemId);
+        } else {
+            url = codeforcesProblemUrl(problemId);
+            if (url.isEmpty()) {
+                url = luoguProblemUrl(problemId);
+            }
+        }
+
+        if (url.isEmpty()) {
+            QMessageBox::information(
+                this,
+                "没有题目链接",
+                "这道题还没有有效的平台/题号。请先编辑任务并填写平台和题号。");
+            return;
+        }
+        if (!QDesktopServices::openUrl(url)) {
+            QMessageBox::warning(this, "无法打开浏览器", "请手动访问：\n" + url.toString());
+        }
     }
 
     void showLuoguError(const QString& error) {

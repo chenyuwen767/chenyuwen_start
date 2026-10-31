@@ -12,6 +12,7 @@ private slots:
     void rejectsNonCodeforcesIds();
     void buildsProblemKeys();
     void rejectsInvalidProblemKeys();
+    void buildsProblemUrls();
 };
 
 void CodeforcesProblemTest::normalizesProblemIds() {
@@ -40,6 +41,14 @@ void CodeforcesProblemTest::rejectsInvalidProblemKeys() {
     QVERIFY(codeforcesProblemKey(1900, "").isEmpty());
     QVERIFY(codeforcesProblemKey(1900, "1A").isEmpty());
     QVERIFY(codeforcesProblemKey(-1, "A").isEmpty());
+}
+
+void CodeforcesProblemTest::buildsProblemUrls() {
+    QCOMPARE(codeforcesProblemUrl("1900A").toString(),
+             QString("https://codeforces.com/problemset/problem/1900/A"));
+    QCOMPARE(codeforcesProblemUrl("CF-1900-a").toString(),
+             QString("https://codeforces.com/problemset/problem/1900/A"));
+    QVERIFY(codeforcesProblemUrl("not-a-problem").isEmpty());
 }
 
 int main(int argc, char** argv) {

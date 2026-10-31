@@ -21,7 +21,7 @@
   ```
 
 - [ ] 0 编译警告（项目开启了 `-Wall -Wextra -Wpedantic` / `/W4`）。
-- [ ] 七个测试套件全部通过：`task_store`、`app_paths`、`task_export`、`task_history`、`json_task_store`、`task_table_model`、`codeforces_problem`。
+- [ ] 八个测试套件全部通过：`task_store`、`app_paths`、`task_export`、`task_history`、`json_task_store`、`task_table_model`、`codeforces_problem`、`luogu_problem`。
 - [ ] 启动冒烟：`--portable --smoke-test` 能构造窗口并自动退出（CI 使用 `Start-Process -Wait` 检查退出码）。
 
 ## 3. 数据安全验收
@@ -53,6 +53,8 @@
 - [ ] “导入最近 AC”跳过已有题号，导入后平台/题号/难度正确。
 - [ ] Codeforces 不存在账号：友好错误，按钮恢复。
 - [ ] 连续快速查询两个 handle：不出现未处理 429，界面只显示最后一次结果。
+- [ ] 洛谷题号查询：合法题号显示标题/难度/通过数；不存在或受限页面给出可读错误。
+- [ ] 洛谷题号可关联到选中任务或新建任务，任务表“打开题目”能打开正确页面。
 - [ ] 洛谷正常账号：通过/提交/等级分/关注。
 - [ ] 洛谷统计为 `null` 的账号：显示“未公开”，不显示 0。
 - [ ] 断网：15 秒内给出错误提示，程序不卡死。

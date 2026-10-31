@@ -14,6 +14,7 @@
 - 使用 JSON v3 保存到用户数据目录，保存时保留上一版 `.bak` 备份；旧版 `tasks.txt` 和 JSON v2 会自动兼容。
 - 题目名称、分类、难度、平台、题号、标签或备注里包含 Tab、换行等字符时也能正确保存。
 - 输入 Codeforces handle 后查看等级、rating、最近提交和最近 1000 次提交里的不同 AC 题数；可核验关联任务，或把最近 AC 导入任务列表。
+- 输入洛谷题号可查询公开题目信息，关联到选中任务或直接新建任务；任务表可一键打开 Codeforces/洛谷题目页。
 - 输入洛谷用户名或 UID 后查看公开资料、通过题数、提交题数、等级分与关注统计。
 - 使用统一的卡片、标签页、按钮与表格样式，便于切换和阅读信息。
 
@@ -115,6 +116,7 @@ windeployqt --release --no-translations --compiler-runtime dist\task_notebook_gu
 ├── src/app_paths.*                # 数据目录、迁移与备份恢复
 ├── src/codeforces_problem.*      # CF 题号归一化与匹配
 ├── src/json_task_store.*         # JSON v3 任务存储与备份
+├── src/luogu_problem.*           # 洛谷题号、页面解析与链接
 ├── src/task_export.*              # CSV 导出/导入
 ├── src/task_history.*             # 撤销快照栈
 ├── src/task_store.*               # 旧版 TSV 读取/迁移
@@ -127,6 +129,7 @@ windeployqt --release --no-translations --compiler-runtime dist\task_notebook_gu
 ├── tests/test_task_history.cpp    # 撤销栈测试（Qt Test）
 ├── tests/test_task_table_model.cpp # 模型/筛选/排序测试（Qt Test）
 ├── tests/test_codeforces_problem.cpp # CF 题号匹配测试（Qt Test）
+├── tests/test_luogu_problem.cpp   # 洛谷题号/页面解析测试（Qt Test）
 ├── scripts/package.ps1            # 便携版打包脚本
 ├── docs/ROADMAP.md                # 项目评估与后续发展规划
 ├── docs/RELEASE.md                # 发布检查清单

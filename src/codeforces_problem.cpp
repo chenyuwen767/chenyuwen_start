@@ -31,3 +31,18 @@ QString codeforcesProblemKey(int contestId, const QString& index) {
     }
     return QString::number(contestId) + normalizedIndex;
 }
+
+QUrl codeforcesProblemUrl(const QString& problemId) {
+    const QString key = normalizeCodeforcesProblemId(problemId);
+    const QRegularExpression pattern("^(\\d+)([A-Z]\\d*)$");
+    const QRegularExpressionMatch match = pattern.match(key);
+    if (!match.hasMatch()) {
+        return {};
+    }
+
+    QUrl url;
+    url.setScheme("https");
+    url.setHost("codeforces.com");
+    url.setPath("/problemset/problem/" + match.captured(1) + "/" + match.captured(2));
+    return url;
+}
