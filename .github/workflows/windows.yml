@@ -46,10 +46,7 @@ jobs:
       - name: Package portable build
         shell: pwsh
         run: |
-          New-Item -ItemType Directory -Path dist | Out-Null
-          cmake --install build --prefix dist --config Release
-          windeployqt --release --no-translations --compiler-runtime dist\task_notebook_gui.exe
-          Compress-Archive -Path dist\* -DestinationPath task_notebook_gui-windows.zip
+          .\scripts\package.ps1
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4

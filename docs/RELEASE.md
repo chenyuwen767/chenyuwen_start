@@ -56,14 +56,22 @@
 
 ## 6. 打包
 
+推荐使用脚本，它会补齐 MinGW/第三方 DLL：
+
+```powershell
+.\scripts\package.ps1
+```
+
+手工命令：
+
 ```powershell
 cmake --install build --prefix dist --config Release
 windeployqt --release --no-translations --compiler-runtime dist\task_notebook_gui.exe
 Compress-Archive -Path dist\* -DestinationPath task_notebook_gui-windows.zip
 ```
 
-- [ ] `dist` 中包含 exe、Qt DLL、`platforms/qwindows.dll`。
-- [ ] 在**没有安装 Qt** 的干净 Windows 上解压并启动。
+- [ ] `dist` 中包含 exe、Qt DLL、`platforms/qwindows.dll`，以及 `libgcc_s_seh-1.dll`、`libstdc++-6.dll`、ICU 等依赖。
+- [ ] 在没有安装 Qt/MSYS2 的干净 Windows 上解压并启动。
 - [ ] 在另一台机器上完成一次“新增 → 保存 → 重开”。
 - [ ] 可选：用 Inno Setup/NSIS 生成安装包，验证开始菜单与卸载。
 

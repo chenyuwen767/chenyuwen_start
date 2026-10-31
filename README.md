@@ -77,16 +77,22 @@ Codeforces 官方 API 文档：[方法说明](https://codeforces.com/apiHelp/met
 
 ## 打包便携版
 
+推荐直接运行：
+
+```powershell
+.\scripts\package.ps1
+```
+
+脚本会执行 CMake 安装、`windeployqt`、补齐 MinGW/第三方依赖 DLL，并生成 `task_notebook_gui-windows.zip`。目标机器不需要安装 Qt 或 MSYS2。
+
+如果手工打包，至少需要：
+
 ```powershell
 cmake --install build --prefix dist --config Release
 windeployqt --release --no-translations --compiler-runtime dist\task_notebook_gui.exe
 ```
 
-将 `dist` 整个目录压缩即可分发；目标机器不需要安装 Qt。也可以直接运行：
-
-```powershell
-.\scripts\package.ps1
-```
+注意：MinGW 构建时 `windeployqt` 不一定复制 `libgcc`、`libstdc++`、ICU 等依赖，建议使用脚本。
 
 ## 后续规划
 

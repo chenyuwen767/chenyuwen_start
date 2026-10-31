@@ -24,7 +24,7 @@
 | 撤销最近一步 | 已完成 | `TaskHistory` 快照栈，菜单与 `Ctrl+Z` 均可触发 |
 | Windows CI | 已配置、未实跑 | workflow 已提交，等待 GitHub 首次运行 |
 | 许可证与发布文档 | 已完成 | MIT LICENSE、隐私说明、已知限制、CHANGELOG |
-| 便携版打包 | 未验证 | 当前沙箱拦截 `windeployqt` 子进程，需在真实环境验证 |
+| 便携版打包 | 已验证 | `scripts/package.ps1` 补齐 MinGW/ICU 依赖；在无 Qt PATH 下启动通过，仍需干净虚拟机验收 |
 | JSON v2、搜索排序联动 | 待办 | 见下文 M2 |
 
 ---
