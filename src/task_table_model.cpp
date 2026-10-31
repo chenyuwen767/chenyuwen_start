@@ -10,6 +10,26 @@ QString taskTagsText(const std::vector<std::string>& tags) {
     return values.join(", ");
 }
 
+namespace {
+
+QString problemText(const Task& task) {
+    const QString platform = QString::fromUtf8(task.platform.c_str()).toLower();
+    const QString problemId = QString::fromUtf8(task.problemId.c_str());
+    if (problemId.isEmpty()) {
+        return {};
+    }
+    if (platform == "codeforces") {
+        return "CF " + problemId;
+    }
+    if (platform == "luogu") {
+        return "洛谷 " + problemId;
+    }
+    return problemId;
+}
+
+} // namespace
+
+
 TaskTableModel::TaskTableModel(QObject* parent) : QAbstractTableModel(parent) {}
 
 void TaskTableModel::setTasks(std::vector<Task>* tasks) {
@@ -45,6 +65,8 @@ QVariant TaskTableModel::data(const QModelIndex& index, int role) const {
         switch (index.column()) {
         case TitleColumn:
             return QString::fromUtf8(task.title.c_str());
+        case ProblemColumn:
+            return problemText(task);
         case CategoryColumn:
             return QString::fromUtf8(task.category.c_str());
         case DifficultyColumn:
@@ -75,6 +97,8 @@ QVariant TaskTableModel::headerData(int section, Qt::Orientation orientation, in
     switch (section) {
     case TitleColumn:
         return QString("题目名称");
+    case ProblemColumn:
+        return QString("平台/题号");
     case CategoryColumn:
         return QString("分类");
     case DifficultyColumn:
@@ -143,6 +167,7 @@ bool TaskFilterProxyModel::filterAcceptsRow(int sourceRow, const QModelIndex& so
 
     const QString haystack =
         QString::fromUtf8(task->title.c_str()) + ' ' +
+        problemText(*task) + ' ' +
         QString::fromUtf8(task->category.c_str()) + ' ' +
         QString::fromUtf8(task->difficulty.c_str()) + ' ' +
         taskTagsText(task->tags) + ' ' +

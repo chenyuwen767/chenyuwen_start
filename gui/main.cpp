@@ -2,6 +2,7 @@
 #include <QAction>
 #include <QCheckBox>
 #include <QCloseEvent>
+#include <QComboBox>
 #include <QCoreApplication>
 #include <QCryptographicHash>
 #include <QDateTime>
@@ -15,6 +16,7 @@
 #include <QFrame>
 #include <QHeaderView>
 #include <QHBoxLayout>
+#include <QHash>
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -49,9 +51,11 @@
 #include <filesystem>
 #include <memory>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "app_paths.h"
+#include "codeforces_problem.h"
 #include "json_task_store.h"
 #include "task_export.h"
 #include "task_history.h"
@@ -119,25 +123,37 @@ bool promptTaskFields(QWidget* parent,
                       QString& title,
                       QString& category,
                       QString& difficulty,
+                      QString& platform,
+                      QString& problemId,
                       QString& tags,
                       QString& notes) {
     QDialog dialog(parent);
     dialog.setWindowTitle(dialogTitle);
-    dialog.resize(480, 340);
+    dialog.resize(480, 400);
 
     auto* layout = new QVBoxLayout(&dialog);
     auto* form = new QFormLayout;
     auto* titleEdit = new QLineEdit(title, &dialog);
     auto* categoryEdit = new QLineEdit(category, &dialog);
     auto* difficultyEdit = new QLineEdit(difficulty, &dialog);
+    auto* platformEdit = new QComboBox(&dialog);
+    platformEdit->addItem("（无）", QString());
+    platformEdit->addItem("Codeforces", QString("codeforces"));
+    platformEdit->addItem("洛谷", QString("luogu"));
+    const int platformIndex = platformEdit->findData(platform);
+    platformEdit->setCurrentIndex(platformIndex >= 0 ? platformIndex : 0);
+    auto* problemIdEdit = new QLineEdit(problemId, &dialog);
+    problemIdEdit->setPlaceholderText("例如 1900A 或 P1001");
     auto* tagsEdit = new QLineEdit(tags, &dialog);
     auto* notesEdit = new QPlainTextEdit(notes, &dialog);
     tagsEdit->setPlaceholderText("多个标签用逗号分隔，例如：trie, xor");
     notesEdit->setPlaceholderText("可记录思路、易错点、重做提醒等");
-    notesEdit->setFixedHeight(90);
+    notesEdit->setFixedHeight(80);
     form->addRow("题目名称：", titleEdit);
     form->addRow("分类：", categoryEdit);
     form->addRow("难度：", difficultyEdit);
+    form->addRow("平台：", platformEdit);
+    form->addRow("题号：", problemIdEdit);
     form->addRow("标签：", tagsEdit);
     form->addRow("备注：", notesEdit);
     layout->addLayout(form);
@@ -154,6 +170,14 @@ bool promptTaskFields(QWidget* parent,
         title = titleEdit->text().trimmed();
         category = categoryEdit->text().trimmed();
         difficulty = difficultyEdit->text().trimmed();
+        platform = platformEdit->currentData().toString();
+        problemId = problemIdEdit->text().trimmed();
+        if (platform == "codeforces" && !problemId.isEmpty()) {
+            const QString normalized = normalizeCodeforcesProblemId(problemId);
+            if (!normalized.isEmpty()) {
+                problemId = normalized;
+            }
+        }
         tags = tagsEdit->text().trimmed();
         notes = notesEdit->toPlainText().trimmed();
         if (!title.isEmpty() && !category.isEmpty() && !difficulty.isEmpty()) {
@@ -448,6 +472,9 @@ private:
     QPushButton* codeforcesButton_ = nullptr;
     QLabel* codeforcesSummary_ = nullptr;
     QString codeforcesProfileSummary_;
+    QPushButton* codeforcesVerifyButton_ = nullptr;
+    QPushButton* codeforcesImportButton_ = nullptr;
+    QHash<QString, QJsonObject> solvedCodeforcesProblems_;
     QTableWidget* codeforcesSubmissionsTable_ = nullptr;
     QLineEdit* luoguHandleInput_ = nullptr;
     QPushButton* luoguButton_ = nullptr;
@@ -491,7 +518,7 @@ private:
         auto* searchLabel = new QLabel("搜索", searchCard);
         taskSearch_ = new QLineEdit(searchCard);
         taskSearch_->setClearButtonEnabled(true);
-        taskSearch_->setPlaceholderText("题目名称、分类、难度、标签或备注");
+        taskSearch_->setPlaceholderText("题目名称、平台/题号、分类、难度、标签或备注");
         searchLayout->addWidget(searchLabel);
         searchLayout->addWidget(taskSearch_);
         layout->addWidget(searchCard);
@@ -512,6 +539,8 @@ private:
         taskTable_->horizontalHeader()->setStretchLastSection(true);
         taskTable_->horizontalHeader()->setSectionResizeMode(TaskTableModel::TitleColumn,
                                                              QHeaderView::Stretch);
+        taskTable_->horizontalHeader()->setSectionResizeMode(TaskTableModel::ProblemColumn,
+                                                             QHeaderView::ResizeToContents);
         taskTable_->verticalHeader()->setVisible(false);
         layout->addWidget(taskTable_);
 
@@ -593,6 +622,18 @@ private:
         note->setWordWrap(true);
         layout->addWidget(note);
 
+        auto* taskActions = new QHBoxLayout;
+        codeforcesVerifyButton_ = new QPushButton("核验关联任务", page);
+        codeforcesImportButton_ = new QPushButton("导入最近 AC", page);
+        codeforcesVerifyButton_->setEnabled(false);
+        codeforcesImportButton_->setEnabled(false);
+        codeforcesVerifyButton_->setToolTip("把已 AC 且已关联 Codeforces 题号的任务标记为完成");
+        codeforcesImportButton_->setToolTip("把最近通过但尚未记录在任务列表中的题目导入");
+        taskActions->addWidget(codeforcesVerifyButton_);
+        taskActions->addWidget(codeforcesImportButton_);
+        taskActions->addStretch();
+        layout->addLayout(taskActions);
+
         codeforcesSubmissionsTable_ = new QTableWidget(page);
         codeforcesSubmissionsTable_->setColumnCount(4);
         codeforcesSubmissionsTable_->setHorizontalHeaderLabels({"提交时间", "题目", "结果", "语言"});
@@ -602,7 +643,12 @@ private:
         layout->addWidget(codeforcesSubmissionsTable_);
 
         connect(codeforcesButton_, &QPushButton::clicked, this, [this] { loadCodeforcesAccount(); });
-        connect(codeforcesHandleInput_, &QLineEdit::returnPressed, this, [this] { loadCodeforcesAccount(); });
+        connect(codeforcesHandleInput_, &QLineEdit::returnPressed, this,
+                [this] { loadCodeforcesAccount(); });
+        connect(codeforcesVerifyButton_, &QPushButton::clicked, this,
+                [this] { verifyCodeforcesTasks(); });
+        connect(codeforcesImportButton_, &QPushButton::clicked, this,
+                [this] { importCodeforcesSolved(); });
         return page;
     }
 
@@ -683,9 +729,12 @@ private:
         QString title;
         QString category;
         QString difficulty;
+        QString platform;
+        QString problemId;
         QString tags;
         QString notes;
-        if (!promptTaskFields(this, "新增题目", title, category, difficulty, tags, notes)) {
+        if (!promptTaskFields(this, "新增题目", title, category, difficulty, platform, problemId,
+                              tags, notes)) {
             return;
         }
         if (taskTitleExists(title)) {
@@ -705,6 +754,8 @@ private:
         task.title = toTaskText(title);
         task.category = toTaskText(category);
         task.difficulty = toTaskText(difficulty);
+        task.platform = toTaskText(platform);
+        task.problemId = toTaskText(problemId);
         task.tags = toTaskTags(tags);
         task.notes = toTaskText(notes);
         task.id = newTaskId();
@@ -766,9 +817,12 @@ private:
         QString title = taskText(task.title);
         QString category = taskText(task.category);
         QString difficulty = taskText(task.difficulty);
+        QString platform = taskText(task.platform);
+        QString problemId = taskText(task.problemId);
         QString tags = tagsText(task.tags);
         QString notes = taskText(task.notes);
-        if (!promptTaskFields(this, "编辑题目", title, category, difficulty, tags, notes)) {
+        if (!promptTaskFields(this, "编辑题目", title, category, difficulty, platform, problemId,
+                              tags, notes)) {
             return;
         }
         if (taskTitleExists(title, index)) {
@@ -787,6 +841,8 @@ private:
         tasks_[static_cast<std::size_t>(index)].title = toTaskText(title);
         tasks_[static_cast<std::size_t>(index)].category = toTaskText(category);
         tasks_[static_cast<std::size_t>(index)].difficulty = toTaskText(difficulty);
+        tasks_[static_cast<std::size_t>(index)].platform = toTaskText(platform);
+        tasks_[static_cast<std::size_t>(index)].problemId = toTaskText(problemId);
         tasks_[static_cast<std::size_t>(index)].tags = toTaskTags(tags);
         tasks_[static_cast<std::size_t>(index)].notes = toTaskText(notes);
         if (tasks_[static_cast<std::size_t>(index)].id.empty()) {
@@ -1092,6 +1148,9 @@ private:
 
         codeforcesLoading_ = true;
         codeforcesButton_->setEnabled(false);
+        codeforcesVerifyButton_->setEnabled(false);
+        codeforcesImportButton_->setEnabled(false);
+        solvedCodeforcesProblems_.clear();
         settings_.setValue("codeforces/handle", handle);
         codeforcesSummary_->setText("正在查询账号资料……");
         codeforcesSubmissionsTable_->setRowCount(0);
@@ -1136,22 +1195,33 @@ private:
             if (!readCodeforcesResult(reply, submissions, error)) {
                 reply->deleteLater();
                 codeforcesLoading_ = false;
+                solvedCodeforcesProblems_.clear();
                 codeforcesSummary_->setText(codeforcesProfileSummary_ + "\n提交记录读取失败：" + error);
                 codeforcesButton_->setEnabled(true);
                 return;
             }
 
             QSet<QString> solved;
+            solvedCodeforcesProblems_.clear();
             for (const QJsonValue& value : submissions) {
                 const QJsonObject submission = value.toObject();
                 if (submission.value("verdict").toString() != "OK") {
                     continue;
                 }
                 const QJsonObject problem = submission.value("problem").toObject();
-                solved.insert(QString::number(problem.value("contestId").toInt()) + "/" +
-                              problem.value("index").toString());
+                const QString key = codeforcesProblemKey(problem.value("contestId").toInt(),
+                                                         problem.value("index").toString());
+                if (key.isEmpty()) {
+                    continue;
+                }
+                solved.insert(key);
+                if (!solvedCodeforcesProblems_.contains(key)) {
+                    solvedCodeforcesProblems_.insert(key, problem);
+                }
             }
 
+            codeforcesVerifyButton_->setEnabled(!solvedCodeforcesProblems_.isEmpty());
+            codeforcesImportButton_->setEnabled(!solvedCodeforcesProblems_.isEmpty());
             codeforcesSummary_->setText(
                 codeforcesProfileSummary_ +
                 QString("\n最近 1000 次提交中通过 %1 道不同题目；返回提交数：%2")
@@ -1185,6 +1255,109 @@ private:
             codeforcesSubmissionsTable_->setItem(row, 2, new QTableWidgetItem(verdict));
             codeforcesSubmissionsTable_->setItem(row, 3, new QTableWidgetItem(language));
         }
+    }
+
+    void verifyCodeforcesTasks() {
+        if (solvedCodeforcesProblems_.isEmpty()) {
+            QMessageBox::information(this, "还没有提交数据", "请先查询 Codeforces 账号。");
+            return;
+        }
+
+        std::vector<int> matches;
+        for (std::size_t index = 0; index < tasks_.size(); ++index) {
+            const Task& task = tasks_[index];
+            const QString platform = QString::fromUtf8(task.platform.c_str()).toLower();
+            if (task.completed || platform != "codeforces") {
+                continue;
+            }
+            const QString key = normalizeCodeforcesProblemId(
+                QString::fromUtf8(task.problemId.c_str()));
+            if (!key.isEmpty() && solvedCodeforcesProblems_.contains(key)) {
+                matches.push_back(static_cast<int>(index));
+            }
+        }
+
+        if (matches.empty()) {
+            QMessageBox::information(
+                this,
+                "没有可核验的任务",
+                "没有发现“平台为 Codeforces、已 AC 且尚未完成”的关联任务。\n"
+                "请先编辑任务并填写题号，例如 1900A。");
+            return;
+        }
+
+        rememberState();
+        for (int index : matches) {
+            tasks_[static_cast<std::size_t>(index)].completed = true;
+        }
+        saveAndRefresh();
+        QMessageBox::information(this,
+                                 "核验完成",
+                                 QString("已把 %1 道关联任务标记为完成。").arg(matches.size()));
+    }
+
+    void importCodeforcesSolved() {
+        if (solvedCodeforcesProblems_.isEmpty()) {
+            QMessageBox::information(this, "还没有提交数据", "请先查询 Codeforces 账号。");
+            return;
+        }
+
+        QSet<QString> existing;
+        for (const Task& task : tasks_) {
+            const QString key = normalizeCodeforcesProblemId(
+                QString::fromUtf8(task.problemId.c_str()));
+            if (!key.isEmpty()) {
+                existing.insert(key);
+            }
+        }
+
+        QStringList keys = solvedCodeforcesProblems_.keys();
+        keys.sort();
+        std::vector<QString> missing;
+        for (const QString& key : keys) {
+            if (!existing.contains(key)) {
+                missing.push_back(key);
+            }
+        }
+
+        if (missing.empty()) {
+            QMessageBox::information(this, "没有新题", "最近 AC 的题目都已经在任务列表中。");
+            return;
+        }
+
+        const auto answer = QMessageBox::question(
+            this,
+            "导入最近 AC",
+            QString("将导入 %1 道最近通过、但尚未记录的题目，并标记为完成。\n"
+                    "题目会带上 Codeforces 平台和题号，之后可用于核验。")
+                .arg(static_cast<int>(missing.size())),
+            QMessageBox::Yes | QMessageBox::No,
+            QMessageBox::Yes);
+        if (answer != QMessageBox::Yes) {
+            return;
+        }
+
+        rememberState();
+        for (const QString& key : missing) {
+            const QJsonObject problem = solvedCodeforcesProblems_.value(key);
+            const QString name = problem.value("name").toString();
+            const int rating = problem.value("rating").toInt(0);
+
+            Task task;
+            task.title = toTaskText(name.isEmpty() ? "CF " + key : "CF " + key + " " + name);
+            task.category = toTaskText("Codeforces");
+            task.difficulty = toTaskText(rating > 0 ? QString::number(rating) : QString());
+            task.platform = "codeforces";
+            task.problemId = toTaskText(key);
+            task.completed = true;
+            task.id = newTaskId();
+            tasks_.push_back(task);
+        }
+        saveAndRefresh();
+        QMessageBox::information(this,
+                                 "导入完成",
+                                 QString("已导入 %1 道最近 AC 题目。")
+                                     .arg(static_cast<int>(missing.size())));
     }
 
     void loadLuoguAccount() {

@@ -9,7 +9,8 @@
 - MIT 许可证。
 - 任务编辑、删除、标记为待完成。
 - 标签与备注字段；搜索覆盖标签和备注，表格新增“标签”列。
-- JSON v2 持久化（`tasks.json`），旧版 `tasks.txt` 首次启动自动迁移并保留原文件。
+- 平台/题号字段；Codeforces 题号归一化，支持按关联任务核验 AC、导入最近 AC。
+- JSON v3 持久化（`tasks.json`），兼容 JSON v2 和旧版 `tasks.txt`；旧文件保留。
 - 任务表改用 `QAbstractTableModel` + `QSortFilterProxyModel`，排序/搜索/待完成筛选由代理统一处理。
 - 存储层单元测试（Qt Test），覆盖字段转义、备份、损坏行、旧格式、Unicode 路径。
 - Windows GitHub Actions：构建、测试、`windeployqt` 打包并上传 artifact。
@@ -17,7 +18,7 @@
 - `--portable` 模式：数据文件放在 exe 同目录。
 - 记住窗口位置、上次查询的账号与“只看待完成”筛选状态。
 - 任务搜索（题目/分类/难度）与 `Ctrl+N`、`Ctrl+F`、`Delete` 快捷键。
-- 导出任务为 CSV（UTF-8 BOM，Excel 可直接打开），也可从 CSV 追加或替换导入。
+- 导出任务为 CSV（UTF-8 BOM，含平台/题号/标签/备注），兼容 4/6 列旧格式导入。
 - 新增/编辑改为单个表单对话框，任务表格支持按列排序。
 - 完成率显示；新增/编辑同名题目时给出重复提醒。
 - 单实例锁：同一份数据文件只允许一个窗口写入，避免并发覆盖。
@@ -29,9 +30,9 @@
 ### Changed
 
 - 任务数据默认保存到 `%APPDATA%\chenyuwen\AlgorithmPracticeNotebook\tasks.json`，不再依赖启动目录。
-- 保存改为 JSON v2 + `QSaveFile` 原子替换，并保留上一版 `tasks.json.bak`。
+- 保存改为 JSON v3 + `QSaveFile` 原子替换，并保留上一版 `tasks.json.bak`。
 - 旧版 TSV `tasks.txt` 首次启动迁移为 JSON，原文件保留；旧格式仍可导入。
-- CSV 导出升级为 6 列（题目/分类/难度/标签/备注/状态），导入兼容旧版 4 列。
+- CSV 导出升级为 8 列（题目/分类/难度/平台/题号/标签/备注/状态），导入兼容 4/6 列旧格式。
 - 存储格式增加版本头，字段中的 Tab、换行、反斜杠会被转义；旧格式仍按原样读取。
 - 首次启动会从 exe 同目录或当前目录迁移旧 `tasks.txt`；若主文件缺失但 `.bak` 存在，会先恢复备份。
 - 加载失败或部分行损坏时会提示用户；加载失败时继续保存需要二次确认。

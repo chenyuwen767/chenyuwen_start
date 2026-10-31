@@ -12,6 +12,8 @@ struct Task {
     std::vector<std::string> tags = {};
     std::string notes = {};
     std::string id = {};
+    std::string platform = {};
+    std::string problemId = {};
 };
 
 struct LoadResult {

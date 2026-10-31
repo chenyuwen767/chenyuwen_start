@@ -14,6 +14,7 @@ class TaskTableModel : public QAbstractTableModel {
 public:
     enum Column {
         TitleColumn = 0,
+        ProblemColumn,
         CategoryColumn,
         DifficultyColumn,
         TagsColumn,

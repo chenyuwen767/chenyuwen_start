@@ -34,6 +34,7 @@ private slots:
     void reportsMalformedJson();
     void reportsInvalidEntriesWithoutDroppingValidOnes();
     void missingFileIsEmptyAndOk();
+    void loadsVersion2WithoutNewFields();
 };
 
 void JsonTaskStoreTest::roundTripPreservesAllFields() {
@@ -49,6 +50,8 @@ void JsonTaskStoreTest::roundTripPreservesAllFields() {
     first.tags = {"trie", "xor"};
     first.notes = "重做时先想 20 分钟\n第二行";
     first.id = "task-1";
+    first.platform = "codeforces";
+    first.problemId = "1900A";
 
     Task second;
     second.title = "CF 1900A";
@@ -73,6 +76,8 @@ void JsonTaskStoreTest::roundTripPreservesAllFields() {
     QCOMPARE(textOf(loaded.tasks[0].tags[1]), QString("xor"));
     QCOMPARE(textOf(loaded.tasks[0].notes), QString("重做时先想 20 分钟\n第二行"));
     QCOMPARE(textOf(loaded.tasks[0].id), QString("task-1"));
+    QCOMPARE(textOf(loaded.tasks[0].platform), QString("codeforces"));
+    QCOMPARE(textOf(loaded.tasks[0].problemId), QString("1900A"));
     QCOMPARE(textOf(loaded.tasks[1].id), QString("task-2"));
 }
 
@@ -137,6 +142,21 @@ void JsonTaskStoreTest::missingFileIsEmptyAndOk() {
     QVERIFY(loaded.ok);
     QVERIFY(loaded.tasks.empty());
     QVERIFY(loaded.warnings.empty());
+}
+
+void JsonTaskStoreTest::loadsVersion2WithoutNewFields() {
+    TempDir directory;
+    QVERIFY(directory.isValid());
+    const auto path = jsonPath(directory);
+    QVERIFY(writeFile(directory.filePath("tasks.json"),
+                      R"({"version":2,"tasks":[{"title":"legacy","completed":true}]})"));
+
+    const JsonLoadResult loaded = loadTasksJson(path);
+    QVERIFY(loaded.ok);
+    QCOMPARE(static_cast<int>(loaded.tasks.size()), 1);
+    QCOMPARE(textOf(loaded.tasks[0].title), QString("legacy"));
+    QVERIFY(loaded.tasks[0].platform.empty());
+    QVERIFY(loaded.tasks[0].problemId.empty());
 }
 
 int main(int argc, char** argv) {

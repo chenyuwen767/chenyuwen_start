@@ -29,12 +29,16 @@ std::vector<Task> sampleTasks() {
     alpha.tags = {"dp", "graph"};
     alpha.notes = "graph note";
     alpha.completed = false;
+    alpha.platform = "codeforces";
+    alpha.problemId = "1900A";
 
     Task beta;
     beta.title = "Beta";
     beta.category = "math";
     beta.difficulty = "1200";
     beta.completed = true;
+    beta.platform = "luogu";
+    beta.problemId = "P1001";
 
     return {alpha, beta};
 }
@@ -53,6 +57,10 @@ void TaskTableModelTest::exposesColumnsAndRows() {
     QCOMPARE(model.headerData(TaskTableModel::TagsColumn, Qt::Horizontal).toString(),
              QString("标签"));
     QCOMPARE(model.data(model.index(0, TaskTableModel::TitleColumn)).toString(), QString("Alpha"));
+    QCOMPARE(model.data(model.index(0, TaskTableModel::ProblemColumn)).toString(),
+             QString("CF 1900A"));
+    QCOMPARE(model.data(model.index(1, TaskTableModel::ProblemColumn)).toString(),
+             QString("洛谷 P1001"));
     QCOMPARE(model.data(model.index(0, TaskTableModel::TagsColumn)).toString(),
              QString("dp, graph"));
     QCOMPARE(model.data(model.index(1, TaskTableModel::StatusColumn)).toString(),
@@ -73,6 +81,12 @@ void TaskTableModelTest::filtersByKeywordAcrossFields() {
     QCOMPARE(proxy.data(proxy.index(0, TaskTableModel::TitleColumn)).toString(), QString("Alpha"));
 
     proxy.setKeyword("graph note");
+    QCOMPARE(proxy.rowCount(), 1);
+
+    proxy.setKeyword("1900A");
+    QCOMPARE(proxy.rowCount(), 1);
+
+    proxy.setKeyword("P1001");
     QCOMPARE(proxy.rowCount(), 1);
 
     proxy.setKeyword("does-not-exist");

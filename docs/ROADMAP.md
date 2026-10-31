@@ -19,11 +19,12 @@
 | 网络超时、防重复查询、洛谷空值 | 已完成 | 15 秒超时；`null` 显示“未公开” |
 | 单实例锁与启动冒烟测试 | 已完成 | `--smoke-test` 已接入 CI |
 | CSV 导入/导出与备份恢复 | 已完成 | UTF-8 BOM；菜单支持导入、导出和“从备份恢复…” |
-| 存储与路径测试 | 已完成 | 11 + 9 + 10 + 4 + 5 + 5 个测试函数（6 个 QtTest 套件），本地全部通过 |
+| 存储与路径测试 | 已完成 | 11 + 9 + 11 + 4 + 6 + 5 + 4 个测试函数（7 个 QtTest 套件），本地全部通过 |
 | 数据目录/锁权限降级 | 已完成 | AppData 不可写时改用程序目录；锁权限失败时改用临时锁 |
 | 撤销最近一步 | 已完成 | `TaskHistory` 快照栈，菜单与 `Ctrl+Z` 均可触发 |
-| JSON v2 + 标签/备注 | 已完成 | `tasks.json`；旧 `tasks.txt` 自动迁移；表格新增标签列 |
+| JSON v3 + 平台/题号 | 已完成 | `tasks.json`；兼容 JSON v2 与旧 `tasks.txt`；表格新增“平台/题号”列 |
 | Model/View 重构 + 标签筛选 | 已完成 | `QAbstractTableModel` + `QSortFilterProxyModel`，排序/搜索/待完成筛选统一走代理 |
+| Codeforces 任务联动 | 已完成 | 题号归一化、核验关联任务、导入最近 AC |
 | Windows CI | 已通过 | run 1–3 全部步骤成功，包含构建、测试、冒烟、打包和 artifact 上传 |
 | 许可证与发布文档 | 已完成 | MIT LICENSE、隐私说明、已知限制、CHANGELOG |
 | 便携版打包 | 已验证 | `scripts/package.ps1` 补齐 MinGW/ICU 依赖；在无 Qt PATH 下启动通过，仍需干净虚拟机验收 |
@@ -708,12 +709,12 @@ install(TARGETS task_notebook_gui RUNTIME DESTINATION .)
 
 | 指标 | 当前 | v0.3.1 目标 | v1.0 目标 |
 |---|---|---|---|
-| 单元测试数 | 44 | ≥ 15 | ≥ 40 |
+| 单元测试数 | 50 | ≥ 15 | ≥ 40 |
 | 存储/解析分支覆盖 | 0 | ≥ 60% | ≥ 75% |
 | CI | 无 | Windows 构建+测试 | 构建+测试+打包+release |
 | 编译警告 | 0（手工检查） | 0（CI 强制） | 0 |
 | 干净机器可运行 | 否 | portable zip | 安装包 + 卸载 |
-| 数据格式 | TSV 无版本 | JSON v2 + 迁移 | JSON v2 稳定 |
+| 数据格式 | TSV 无版本 | JSON v3 + 迁移 | JSON v3 稳定 |
 | 已知 P0/P1 | 7+ | 0 | 0 |
 
 ### 9.2 产品指标（自用/小范围试用）

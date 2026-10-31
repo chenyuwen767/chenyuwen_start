@@ -46,8 +46,9 @@ JsonLoadResult loadTasksJson(const std::filesystem::path& fileName) {
 
     const QJsonObject root = document.object();
     const QJsonValue versionValue = root.value("version");
-    if (versionValue.isDouble() && versionValue.toInt() != 2) {
-        result.warnings.push_back("tasks.json 的版本不是 2，已按兼容方式读取。");
+    const int version = versionValue.isDouble() ? versionValue.toInt() : 3;
+    if (version < 2 || version > 3) {
+        result.warnings.push_back("tasks.json 的版本不是 2/3，已按兼容方式读取。");
     }
 
     const QJsonValue tasksValue = root.value("tasks");
@@ -80,6 +81,8 @@ JsonLoadResult loadTasksJson(const std::filesystem::path& fileName) {
         task.completed = object.value("completed").toBool(false);
         task.notes = toStd(object.value("notes").toString());
         task.id = toStd(object.value("id").toString());
+        task.platform = toStd(object.value("platform").toString());
+        task.problemId = toStd(object.value("problemId").toString());
 
         const QJsonValue tagsValue = object.value("tags");
         if (tagsValue.isArray()) {
@@ -113,6 +116,8 @@ bool saveTasksJson(const std::vector<Task>& tasks,
         object.insert("difficulty", QString::fromUtf8(task.difficulty.c_str()));
         object.insert("completed", task.completed);
         object.insert("notes", QString::fromUtf8(task.notes.c_str()));
+        object.insert("platform", QString::fromUtf8(task.platform.c_str()));
+        object.insert("problemId", QString::fromUtf8(task.problemId.c_str()));
 
         QJsonArray tagsArray;
         for (const std::string& tag : task.tags) {
@@ -123,7 +128,7 @@ bool saveTasksJson(const std::vector<Task>& tasks,
     }
 
     QJsonObject root;
-    root.insert("version", 2);
+    root.insert("version", 3);
     root.insert("tasks", tasksArray);
     const QByteArray data = QJsonDocument(root).toJson(QJsonDocument::Indented);
 
