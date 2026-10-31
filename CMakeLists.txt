@@ -19,6 +19,7 @@ add_executable(task_notebook_gui WIN32
     src/task_export.cpp
     src/task_history.cpp
     src/task_store.cpp
+    src/task_table_model.cpp
 )
 target_include_directories(task_notebook_gui PRIVATE src "${CMAKE_BINARY_DIR}/generated")
 target_link_libraries(task_notebook_gui PRIVATE Qt6::Widgets Qt6::Network)
@@ -70,18 +71,27 @@ if (BUILD_TESTING)
     target_include_directories(test_json_task_store PRIVATE src tests)
     target_link_libraries(test_json_task_store PRIVATE Qt6::Test)
 
+    add_executable(test_task_table_model
+        tests/test_task_table_model.cpp
+        src/task_table_model.cpp
+    )
+    target_include_directories(test_task_table_model PRIVATE src tests)
+    target_link_libraries(test_task_table_model PRIVATE Qt6::Test)
+
     if (MSVC)
         target_compile_options(test_task_store PRIVATE /W4 /permissive-)
         target_compile_options(test_app_paths PRIVATE /W4 /permissive-)
         target_compile_options(test_task_export PRIVATE /W4 /permissive-)
         target_compile_options(test_task_history PRIVATE /W4 /permissive-)
         target_compile_options(test_json_task_store PRIVATE /W4 /permissive-)
+        target_compile_options(test_task_table_model PRIVATE /W4 /permissive-)
     else()
         target_compile_options(test_task_store PRIVATE -Wall -Wextra -Wpedantic)
         target_compile_options(test_app_paths PRIVATE -Wall -Wextra -Wpedantic)
         target_compile_options(test_task_export PRIVATE -Wall -Wextra -Wpedantic)
         target_compile_options(test_task_history PRIVATE -Wall -Wextra -Wpedantic)
         target_compile_options(test_json_task_store PRIVATE -Wall -Wextra -Wpedantic)
+        target_compile_options(test_task_table_model PRIVATE -Wall -Wextra -Wpedantic)
     endif()
 
     add_test(NAME task_store COMMAND test_task_store)
@@ -89,4 +99,5 @@ if (BUILD_TESTING)
     add_test(NAME task_export COMMAND test_task_export)
     add_test(NAME task_history COMMAND test_task_history)
     add_test(NAME json_task_store COMMAND test_json_task_store)
+    add_test(NAME task_table_model COMMAND test_task_table_model)
 endif()

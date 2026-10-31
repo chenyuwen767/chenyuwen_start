@@ -10,6 +10,7 @@
 - 任务编辑、删除、标记为待完成。
 - 标签与备注字段；搜索覆盖标签和备注，表格新增“标签”列。
 - JSON v2 持久化（`tasks.json`），旧版 `tasks.txt` 首次启动自动迁移并保留原文件。
+- 任务表改用 `QAbstractTableModel` + `QSortFilterProxyModel`，排序/搜索/待完成筛选由代理统一处理。
 - 存储层单元测试（Qt Test），覆盖字段转义、备份、损坏行、旧格式、Unicode 路径。
 - Windows GitHub Actions：构建、测试、`windeployqt` 打包并上传 artifact。
 - `--smoke-test` 启动冒烟测试：构造真实窗口后自动退出，已接入 CI。

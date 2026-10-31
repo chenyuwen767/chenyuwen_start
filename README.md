@@ -117,12 +117,14 @@ windeployqt --release --no-translations --compiler-runtime dist\task_notebook_gu
 ├── src/task_export.*              # CSV 导出/导入
 ├── src/task_history.*             # 撤销快照栈
 ├── src/task_store.*               # 旧版 TSV 读取/迁移
+├── src/task_table_model.*         # 任务表模型与筛选代理
 ├── src/version.h.in               # CMake 生成的版本头模板
 ├── tests/test_task_store.cpp      # 旧版 TSV 存储测试（Qt Test）
 ├── tests/test_json_task_store.cpp # JSON v2 存储测试（Qt Test）
 ├── tests/test_app_paths.cpp       # 数据目录/迁移测试（Qt Test）
 ├── tests/test_task_export.cpp     # CSV 导出/导入测试（Qt Test）
 ├── tests/test_task_history.cpp    # 撤销栈测试（Qt Test）
+├── tests/test_task_table_model.cpp # 模型/筛选/排序测试（Qt Test）
 ├── scripts/package.ps1            # 便携版打包脚本
 ├── docs/ROADMAP.md                # 项目评估与后续发展规划
 ├── docs/RELEASE.md                # 发布检查清单

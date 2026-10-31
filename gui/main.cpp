@@ -38,6 +38,7 @@
 #include <QStringList>
 #include <QTableWidget>
 #include <QTabWidget>
+#include <QTableView>
 #include <QTimer>
 #include <QUrl>
 #include <QUrlQuery>
@@ -55,6 +56,7 @@
 #include "task_export.h"
 #include "task_history.h"
 #include "task_store.h"
+#include "task_table_model.h"
 
 #if __has_include("version.h")
 #include "version.h"
@@ -73,11 +75,7 @@ std::string toTaskText(const QString& value) {
 }
 
 QString tagsText(const std::vector<std::string>& tags) {
-    QStringList values;
-    for (const std::string& tag : tags) {
-        values << taskText(tag);
-    }
-    return values.join(", ");
+    return taskTagsText(tags);
 }
 
 std::vector<std::string> toTaskTags(const QString& text) {
@@ -326,7 +324,7 @@ public:
                 font-weight: 700;
                 padding: 9px;
             }
-            QTableWidget {
+            QTableView, QTableWidget {
                 alternate-background-color: #f8faff;
                 background: white;
                 border: 1px solid #dfe6f0;
@@ -443,7 +441,9 @@ private:
     QLabel* taskSummary_ = nullptr;
     QCheckBox* pendingOnly_ = nullptr;
     QLineEdit* taskSearch_ = nullptr;
-    QTableWidget* taskTable_ = nullptr;
+    TaskTableModel* taskModel_ = nullptr;
+    TaskFilterProxyModel* taskProxy_ = nullptr;
+    QTableView* taskTable_ = nullptr;
     QLineEdit* codeforcesHandleInput_ = nullptr;
     QPushButton* codeforcesButton_ = nullptr;
     QLabel* codeforcesSummary_ = nullptr;
@@ -496,15 +496,23 @@ private:
         searchLayout->addWidget(taskSearch_);
         layout->addWidget(searchCard);
 
-        taskTable_ = new QTableWidget(page);
-        taskTable_->setColumnCount(5);
-        taskTable_->setHorizontalHeaderLabels({"题目名称", "分类", "难度", "标签", "状态"});
+        taskModel_ = new TaskTableModel(this);
+        taskModel_->setTasks(&tasks_);
+        taskProxy_ = new TaskFilterProxyModel(this);
+        taskProxy_->setSourceModel(taskModel_);
+
+        taskTable_ = new QTableView(page);
+        taskTable_->setModel(taskProxy_);
         taskTable_->setSelectionBehavior(QAbstractItemView::SelectRows);
+        taskTable_->setSelectionMode(QAbstractItemView::SingleSelection);
         taskTable_->setEditTriggers(QAbstractItemView::NoEditTriggers);
         taskTable_->setAlternatingRowColors(true);
         taskTable_->setSortingEnabled(true);
-        taskTable_->sortByColumn(0, Qt::AscendingOrder);
+        taskTable_->sortByColumn(TaskTableModel::TitleColumn, Qt::AscendingOrder);
         taskTable_->horizontalHeader()->setStretchLastSection(true);
+        taskTable_->horizontalHeader()->setSectionResizeMode(TaskTableModel::TitleColumn,
+                                                             QHeaderView::Stretch);
+        taskTable_->verticalHeader()->setVisible(false);
         layout->addWidget(taskTable_);
 
         auto* buttons = new QHBoxLayout;
@@ -524,15 +532,21 @@ private:
 
         connect(pendingOnly_, &QCheckBox::toggled, this, [this](bool checked) {
             settings_.setValue("tasks/pendingOnly", checked);
-            refreshTasks();
+            taskProxy_->setPendingOnly(checked);
+            updateTaskSummary();
         });
-        connect(taskSearch_, &QLineEdit::textChanged, this, [this] { refreshTasks(); });
+        connect(taskSearch_, &QLineEdit::textChanged, this, [this](const QString& text) {
+            taskProxy_->setKeyword(text.trimmed());
+            updateTaskSummary();
+        });
         connect(addButton, &QPushButton::clicked, this, [this] { addTask(); });
         connect(editButton, &QPushButton::clicked, this, [this] { editTask(); });
         connect(completeButton, &QPushButton::clicked, this, [this] { completeTask(); });
         connect(pendingButton, &QPushButton::clicked, this, [this] { reopenTask(); });
         connect(deleteButton, &QPushButton::clicked, this, [this] { deleteTask(); });
-        connect(taskTable_, &QTableWidget::doubleClicked, this, [this] { editTask(); });
+        connect(taskTable_, &QTableView::doubleClicked, this, [this](const QModelIndex&) {
+            editTask();
+        });
 
         auto* newShortcut = new QShortcut(QKeySequence::New, page);
         newShortcut->setContext(Qt::WidgetWithChildrenShortcut);
@@ -639,43 +653,21 @@ private:
     }
 
     void refreshTasks() {
-        const bool sortingEnabled = taskTable_->isSortingEnabled();
-        taskTable_->setSortingEnabled(false);
-        taskTable_->setRowCount(0);
-        const QString keyword = taskSearch_ ? taskSearch_->text().trimmed() : QString();
-        int completed = 0;
-        int visible = 0;
+        taskModel_->reload();
+        taskProxy_->setKeyword(taskSearch_ ? taskSearch_->text().trimmed() : QString());
+        taskProxy_->setPendingOnly(pendingOnly_->isChecked());
+        updateTaskSummary();
+    }
 
-        for (std::size_t index = 0; index < tasks_.size(); ++index) {
-            const Task& task = tasks_[index];
+    void updateTaskSummary() {
+        int completed = 0;
+        for (const Task& task : tasks_) {
             if (task.completed) {
                 ++completed;
             }
-            if (pendingOnly_->isChecked() && task.completed) {
-                continue;
-            }
-            if (!keyword.isEmpty()) {
-                const QString haystack =
-                    taskText(task.title) + ' ' + taskText(task.category) + ' ' +
-                    taskText(task.difficulty) + ' ' + tagsText(task.tags) + ' ' +
-                    taskText(task.notes);
-                if (!haystack.contains(keyword, Qt::CaseInsensitive)) {
-                    continue;
-                }
-            }
-
-            ++visible;
-            const int row = taskTable_->rowCount();
-            taskTable_->insertRow(row);
-            auto* title = new QTableWidgetItem(taskText(task.title));
-            title->setData(Qt::UserRole, static_cast<int>(index));
-            taskTable_->setItem(row, 0, title);
-            taskTable_->setItem(row, 1, new QTableWidgetItem(taskText(task.category)));
-            taskTable_->setItem(row, 2, new QTableWidgetItem(taskText(task.difficulty)));
-            taskTable_->setItem(row, 3, new QTableWidgetItem(tagsText(task.tags)));
-            taskTable_->setItem(row, 4, new QTableWidgetItem(task.completed ? "已完成" : "待完成"));
         }
 
+        const int visible = taskProxy_->rowCount();
         QString summary = QString("共 %1 道题，已完成 %2 道（%3%）")
                               .arg(tasks_.size())
                               .arg(completed)
@@ -685,7 +677,6 @@ private:
             summary += QString("，当前显示 %1 道").arg(visible);
         }
         taskSummary_->setText(summary);
-        taskTable_->setSortingEnabled(sortingEnabled);
     }
 
     void addTask() {
@@ -756,12 +747,12 @@ private:
     }
 
     int selectedTaskIndex() const {
-        const int row = taskTable_->currentRow();
-        if (row < 0) {
+        const QModelIndex proxyIndex = taskTable_->currentIndex();
+        if (!proxyIndex.isValid()) {
             return -1;
         }
-        const QTableWidgetItem* item = taskTable_->item(row, 0);
-        return item ? item->data(Qt::UserRole).toInt() : -1;
+        const QModelIndex sourceIndex = taskProxy_->mapToSource(proxyIndex);
+        return sourceIndex.isValid() ? sourceIndex.row() : -1;
     }
 
     void editTask() {
